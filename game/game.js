@@ -11,6 +11,18 @@ window.requestAnimationFrameWithContext = (function(){
     };
 })();
 
+// event shim
+var addEvent = function(elem, type, eventHandle) {
+    if (elem == null || typeof(elem) == 'undefined') return;
+    if ( elem.addEventListener ) {
+        elem.addEventListener( type, eventHandle, false );
+    } else if ( elem.attachEvent ) {
+        elem.attachEvent( "on" + type, eventHandle );
+    } else {
+        elem["on"+type]=eventHandle;
+    }
+};
+
 // the actual game that runs in the popup
 (function() {
   game = {
@@ -38,8 +50,16 @@ window.requestAnimationFrameWithContext = (function(){
       this.setPopupSize(width + popupSizeDiff.x, height + popupSizeDiff.y);
     },
 
+    onResize: function(e) {
+
+    },
+
     start: function() {
       window.game = this;
+      var self = this;
+
+      addEvent(window, 'resize', function(e) { self.onResize.call(self, e); });
+
       this.resolution = { x: window.screen.width, y: window.screen.height }
       this.setPopupSize(300, 300);
 
@@ -54,24 +74,52 @@ window.requestAnimationFrameWithContext = (function(){
       ctx.save(); // save default ctx
       this.updateViewportSize();
 
-      this.toggle = (this.toggle || 0) + 1;
-      if (this.toggle % 1 == 0) {
-        this.wx = ((this.wx || 300) + 12) % 300;
-        var newSizeX = 300 + this.wx;
-        var newSizeY = 300 + this.wx;
-        this.setViewportSize(newSizeX, newSizeY);
-        this.centerPopup()
+      // this.toggle = (this.toggle || 0) + 1;
+      // if (this.toggle % 1 == 0) {
+      //   this.wx = ((this.wx || 300) + 12) % 300;
+      //   var newSizeX = 300 + this.wx;
+      //   var newSizeY = 300 + this.wx;
+      //   this.setViewportSize(newSizeX, newSizeY);
+      //   this.centerPopup()
+      // }
+
+      // reset canvas
+      {
+        canvas.width = this.viewportSize.x;
+        canvas.height = this.viewportSize.y;
+        ctx.clearRect(0, 0, canvas.width, canvas.height);
       }
 
-      canvas.width = this.viewportSize.x;
-      canvas.height = this.viewportSize.y;
+      // background
+      {
+        ctx.fillStyle = 'rgb(0, 0, 128)';
+        ctx.fillRect(0, 0, canvas.width, canvas.height);
+      }
 
-      ctx.clearRect(0, 0, canvas.width, canvas.height);
-      this.red = ((this.red || 0) + 8) % 256;
-      ctx.fillStyle = 'rgb(0, 0, 200)';
-      ctx.fillRect(0, 0, canvas.width, canvas.height);
-      ctx.fillStyle = 'rgb(' + this.red + ', 0, 0)';
-      ctx.fillRect(10, 10, canvas.width - 20, canvas.height - 20);
+      // blocks
+      {
+        var blockSize = 20;
+        var blockPositions = [
+          [0, 0],
+          [50, 0],
+          [50, 50],
+          [120, 200],
+          [400, 400],
+          [500, 500],
+          [600, 200]
+        ];
+
+        this.red = ((this.red || 0) + 8) % 256;
+        ctx.fillStyle = 'rgb(' + this.red + ', 0, 0)';
+
+        for (var i = 0; i < blockPositions.length; i++) {
+          var blockPosition = blockPositions[i];
+          ctx.save();
+          ctx.translate(blockPosition[0], blockPosition[1])
+          ctx.fillRect(0, 0, blockSize, blockSize);              
+          ctx.restore();
+        };    
+      }
 
       ctx.restore(); // restore default ctx
       requestAnimationFrame(function() { self.update.call(self); });
