@@ -1,3 +1,5 @@
+"use strict"
+
 // global object for stuff
 window.SR = window.SR || {};
 
@@ -25,18 +27,31 @@ var addEvent = function(elem, type, eventHandle) {
 
 // the actual game that runs in the popup
 (function() {
-  game = {
+  var game = {
     setPopupSize: function(width, height) {
-      this.popupSize = { x: width, y: height };
-      window.resizeTo(this.popupSize.x, this.popupSize.y);  
+      window.resizeTo(width, height);
+      this.updatePopupSize();
       this.updateViewportSize();
     },
+    updatePopupSize: function() {
+      this.popupSize = { x: window.outerWidth, y: window.outerHeight };
+    },
+    updatePopupPosition: function() {
+      this.popupPosition = this.popupPosition || { x: 0, y: 0};
+      this.popupPosition.x = window.screenLeft || window.screenX;
+      this.popupPosition.y = window.screenTop || window.screenY;
+    },
     centerPopup: function() {
-        window.moveTo((this.resolution.x - (this.popupSize.x)) / 2, (this.resolution.y - (this.popupSize.y)) / 2)
+        window.moveTo((this.resolution.x - (this.popupSize.x)) / 2, (this.resolution.y - (this.popupSize.y)) / 2);
+        this.updatePopupPosition();
     },
 
+    setViewportSize: function(width, height) {
+      var popupSizeDiff = { x: this.popupSize.x - this.viewportSize.x, y: this.popupSize.y - this.viewportSize.y };
+      this.setPopupSize(width + popupSizeDiff.x, height + popupSizeDiff.y);
+    },
     updateViewportSize: function() {
-      this.viewportSize = this.viewportSize || { x: 0, y: 0}
+      this.viewportSize = this.viewportSize || { x: 0, y: 0};
       // http://stackoverflow.com/a/11744120/2089233
       var w = window,
         d = document,
@@ -45,13 +60,17 @@ var addEvent = function(elem, type, eventHandle) {
       this.viewportSize.x = w.innerWidth || e.clientWidth || g.clientWidth;
       this.viewportSize.y = w.innerHeight|| e.clientHeight|| g.clientHeight;
     },
-    setViewportSize: function(width, height) {
-      var popupSizeDiff = { x: this.popupSize.x - this.viewportSize.x, y: this.popupSize.y - this.viewportSize.y };
-      this.setPopupSize(width + popupSizeDiff.x, height + popupSizeDiff.y);
-    },
 
     onResize: function(e) {
+      var deltas = {};
+      deltas.left = (window.screenLeft || window.screenX) - this.popupPosition.x;
+      deltas.top = (window.screenTop || window.screenY) - this.popupPosition.y;
+      deltas.right = window.outerWidth - this.popupSize.x + deltas.left;
+      deltas.bottom = window.outerHeight - this.popupSize.y + deltas.top;
+      this.updatePopupSize();
 
+      this.cameraPosition.x += deltas.left;
+      this.cameraPosition.y += deltas.top;
     },
 
     start: function() {
@@ -62,6 +81,8 @@ var addEvent = function(elem, type, eventHandle) {
 
       this.resolution = { x: window.screen.width, y: window.screen.height }
       this.setPopupSize(300, 300);
+      this.updatePopupPosition();
+      this.cameraPosition = { x: 0, y: 0};
 
       this.canvas = document.getElementById('game');
       this.ctx = this.canvas.getContext("2d");
@@ -72,6 +93,8 @@ var addEvent = function(elem, type, eventHandle) {
       var ctx = this.ctx;
       var canvas = this.canvas;
       ctx.save(); // save default ctx
+      this.updatePopupSize();
+      this.updatePopupPosition();
       this.updateViewportSize();
 
       // this.toggle = (this.toggle || 0) + 1;
@@ -96,29 +119,38 @@ var addEvent = function(elem, type, eventHandle) {
         ctx.fillRect(0, 0, canvas.width, canvas.height);
       }
 
-      // blocks
+      // everything in here is in camera space, due to subtracting the camera's position
       {
-        var blockSize = 20;
-        var blockPositions = [
-          [0, 0],
-          [50, 0],
-          [50, 50],
-          [120, 200],
-          [400, 400],
-          [500, 500],
-          [600, 200]
-        ];
+        ctx.save();
+        ctx.translate(-this.cameraPosition.x, -this.cameraPosition.y);
 
-        this.red = ((this.red || 0) + 8) % 256;
-        ctx.fillStyle = 'rgb(' + this.red + ', 0, 0)';
+        // blocks
+        {
+          var blockSize = 200;
+          var blockPositions = [
+            [0, 0],
+            [400, 0],
+            [400, 400],
+            [820, 200],
+            [1000, 1000],
+            [-500, -500],
+            [1500, 800]
+          ];
 
-        for (var i = 0; i < blockPositions.length; i++) {
-          var blockPosition = blockPositions[i];
-          ctx.save();
-          ctx.translate(blockPosition[0], blockPosition[1])
-          ctx.fillRect(0, 0, blockSize, blockSize);              
-          ctx.restore();
-        };    
+          this.red = ((this.red || 0) + 8) % 256;
+          ctx.fillStyle = 'rgb(' + this.red + ', 0, 0)';
+
+          for (var i = 0; i < blockPositions.length; i++) {
+            var blockPosition = blockPositions[i];
+            ctx.save();
+            ctx.translate(blockPosition[0], blockPosition[1])
+            ctx.fillRect(0, 0, blockSize, blockSize);              
+            ctx.restore();
+          };
+        }
+
+        // back to screen space
+        ctx.restore();
       }
 
       ctx.restore(); // restore default ctx

@@ -1,3 +1,5 @@
+"use strict"
+
 // anim shim
 window.requestAnimationFrameWithContext = (function(){
   return  window.requestAnimationFrame ||
@@ -10,7 +12,7 @@ window.requestAnimationFrameWithContext = (function(){
 
 // stuff for main webpage, not game popup
 (function() {
-  launcher = {
+  var launcher = {
     start: function() {
       var countdown = document.getElementById('countdown');
       var countdownInterval = setInterval(function() {
