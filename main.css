@@ -1,0 +1,12 @@
+.content {
+  width: 100%;
+  text-align: center;
+}
+
+.launch-text {
+  font-weight: bold;
+}
+
+.countdown {
+  font-size: 32px;
+}
