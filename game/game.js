@@ -1,5 +1,6 @@
 "use strict";
 // NEEDS util.js
+// NEEDS titlescript.js
 
 // the actual game runs in the popup
 (function() {
@@ -166,13 +167,12 @@
 
       // animate title
       {
-        var title = '';
-        this.titleTick = ((this.titleTick || 0) + 1) % 100;
+        var script = this.gameover ? titleScriptGameOver : titleScript;
 
-        if (!this.gameover) {
-        } else {
-        }
-        
+        var ticksPerTitle = 10;
+        this.titleTick = ((this.titleTick || 0) + 1) % (script.length * ticksPerTitle);
+
+        var title = script[Math.floor(this.titleTick / ticksPerTitle)];
         document.title = title;
       }
 
