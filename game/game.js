@@ -25,6 +25,13 @@ var addEvent = function(elem, type, eventHandle) {
     }
 };
 
+// canvas drawing utils
+var util = {
+  fillRectFromCenterAndSize: function(ctx, centerX, centerY, sizeX, sizeY) {
+    ctx.fillRect(centerX - sizeX/2, centerY - sizeY/2, sizeX, sizeY);
+  }
+};
+
 // the actual game that runs in the popup
 (function() {
   var game = {
@@ -80,31 +87,29 @@ var addEvent = function(elem, type, eventHandle) {
       addEvent(window, 'resize', function(e) { self.onResize.call(self, e); });
 
       this.resolution = { x: window.screen.width, y: window.screen.height }
-      this.setPopupSize(300, 300);
-      this.updatePopupPosition();
+      this.updatePopupSize();
+      this.updateViewportSize();
+      this.setViewportSize(500, 500);
+      this.centerPopup();
       this.cameraPosition = { x: 0, y: 0};
 
       this.canvas = document.getElementById('game');
       this.ctx = this.canvas.getContext("2d");
       this.update();
     },
-    update: function() {
+    update: function(timestamp) {
       var self = this;
+
+      var dtmillis = this.previousTimestamp == 0 ? 0 : timestamp - this.previousTimestamp;
+      var dt = dtmillis / 1000;
+      this.previousTimestamp = timestamp;
+
       var ctx = this.ctx;
       var canvas = this.canvas;
       ctx.save(); // save default ctx
       this.updatePopupSize();
       this.updatePopupPosition();
       this.updateViewportSize();
-
-      // this.toggle = (this.toggle || 0) + 1;
-      // if (this.toggle % 1 == 0) {
-      //   this.wx = ((this.wx || 300) + 12) % 300;
-      //   var newSizeX = 300 + this.wx;
-      //   var newSizeY = 300 + this.wx;
-      //   this.setViewportSize(newSizeX, newSizeY);
-      //   this.centerPopup()
-      // }
 
       // reset canvas
       {
@@ -127,15 +132,20 @@ var addEvent = function(elem, type, eventHandle) {
         // blocks
         {
           var blockSize = 200;
-          var blockPositions = [
-            [0, 0],
-            [400, 0],
-            [400, 400],
-            [820, 200],
-            [1000, 1000],
+          var blockPositions = this.blockPositions = this.blockPositions || [
+            [150, 150],
+            [600, 0],
+            [600, 600],
+            [920, 200],
+            [1200, 1000],
             [-500, -500],
             [1500, 800]
           ];
+          var blockCoverageTimeMax = 2;
+          var blockCoverageTimes = this.blockCoverageTimes = this.blockCoverageTimes || []; // sparse array of seconds of coverage for each block
+          var blocksActivated = this.blocksActivated = this.blocksActivated || []; // sparse array with bool for activation state of each block 
+
+          var blockCoverTolerance = 15;
 
           this.red = ((this.red || 0) + 8) % 256;
           ctx.fillStyle = 'rgb(' + this.red + ', 0, 0)';
@@ -143,8 +153,43 @@ var addEvent = function(elem, type, eventHandle) {
           for (var i = 0; i < blockPositions.length; i++) {
             var blockPosition = blockPositions[i];
             ctx.save();
-            ctx.translate(blockPosition[0], blockPosition[1])
-            ctx.fillRect(0, 0, blockSize, blockSize);              
+            // detect viewport covering block
+            var viewportCoveringBlock = false;
+            {
+              var blockOffsetLeft = blockPosition[0] - this.cameraPosition.x;
+              var blockOffsetTop = blockPosition[1] - this.cameraPosition.y;
+              if (blockOffsetLeft <= 0 && blockOffsetLeft <= blockCoverTolerance && blockOffsetTop <= 0 && blockOffsetTop <= blockCoverTolerance) {
+                var blockOffsetRight = blockSize - this.viewportSize.x + blockOffsetLeft;
+                var blockOffsetBottom = blockSize - this.viewportSize.y + blockOffsetTop;
+                if (blockOffsetRight >= 0 && blockOffsetRight <= blockCoverTolerance && blockOffsetBottom >= 0 && blockOffsetBottom <= blockCoverTolerance) {
+                  viewportCoveringBlock = true;
+                }
+              }
+            }
+            // block coverage stuff
+            {
+              if (viewportCoveringBlock) {
+                blockCoverageTimes[i] = (blockCoverageTimes[i] || 0) + dt;
+              } else {
+                blockCoverageTimes[i] = 0;
+              }
+            }
+            // draw block
+            {
+              ctx.translate(blockPosition[0], blockPosition[1])
+              ctx.fillRect(0, 0, blockSize, blockSize);
+              ctx.fillStyle = blocksActivated[i] ? 'rgb(0, 128, 255)' : viewportCoveringBlock ? 'rgb(255, 255, 255)' : 'rgb(0, 200, 0)';
+              ctx.fillRect(blockCoverTolerance, blockCoverTolerance, blockSize - blockCoverTolerance*2, blockSize - blockCoverTolerance*2);
+              var blockCoverageTime = blockCoverageTimes[i];
+              if (!blocksActivated[i] && blockCoverageTime > 0 && blockCoverageTime <= blockCoverageTimeMax) {
+                var blockCoverageIndicatorSize = (blockSize - blockCoverTolerance*2) * (blockCoverageTime / blockCoverageTimeMax);
+                ctx.fillStyle = 'rgb(255, 255, 0)';
+                util.fillRectFromCenterAndSize(ctx, blockSize/2, blockSize/2, blockCoverageIndicatorSize, blockCoverageIndicatorSize);
+              } 
+              if (blockCoverageTime >= blockCoverageTimeMax) {
+                blocksActivated[i] = true;
+              }
+            }
             ctx.restore();
           };
         }
@@ -154,7 +199,7 @@ var addEvent = function(elem, type, eventHandle) {
       }
 
       ctx.restore(); // restore default ctx
-      requestAnimationFrame(function() { self.update.call(self); });
+      requestAnimationFrame(function(ts) { self.update.call(self, ts); });
     },
   }
 

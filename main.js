@@ -31,10 +31,13 @@ window.requestAnimationFrameWithContext = (function(){
 
       this.update();
     },
-    update: function() {
+    update: function(timestamp) {
       var self = this;
 
-      requestAnimationFrame(function() { self.update.call(self); });
+      var dt = this.previousTimestamp == 0 ? 0 : timestamp - this.previousTimestamp;
+      this.previousTimestamp = timestamp;
+
+      requestAnimationFrame(function(ts) { self.update.call(self, ts); });
     },
   }
 
