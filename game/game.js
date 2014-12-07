@@ -172,7 +172,12 @@ var util = {
 
       // countdown timer
       {
-        this.timer -= dt;
+        if (!this.gameover) {
+          this.timer -= dt;
+          if (this.timer < 0) {
+            this.gameover = true;
+          }
+        }
       }
 
       // animate title
@@ -180,28 +185,26 @@ var util = {
         var title = '';
         this.titleTick = ((this.titleTick || 0) + 1) % 100;
 
-        var timeBarArray = new Array(this.timeBarWidth + 1).join('.').split('');
-        var currentTimeOrbIndex = Math.floor((this.timeBarWidth / 2) * (1 - this.timer / this.timerMax));
+        if (!this.gameover) {
+          var timeBarArray = new Array(this.timeBarWidth + 1).join('.').split('');
+          var currentTimeOrbIndex = Math.floor((this.timeBarWidth / 2) * (1 - this.timer / this.timerMax));
 
-        var clock = this.timeBarClocks[Math.floor(this.titleTick/10)];
-        for (var i = 0; i < (this.timeBarWidth / 2); i++) {
-          var character;
-          if (i == currentTimeOrbIndex) character = clock;
-          else if (i < currentTimeOrbIndex) character = this.timeBarEmptyCircle;
-          else if (i > currentTimeOrbIndex) character = this.timeBarFilledCircle;
+          var clock = this.timeBarClocks[Math.floor(this.titleTick/10)];
+          for (var i = 0; i < (this.timeBarWidth / 2); i++) {
+            var character;
+            if (i == currentTimeOrbIndex) character = clock;
+            else if (i < currentTimeOrbIndex) character = this.timeBarEmptyCircle;
+            else if (i > currentTimeOrbIndex) character = this.timeBarFilledCircle;
 
-          timeBarArray[i] = character;
-          timeBarArray[timeBarArray.length - 1 - i] = character;
-        };
-
-        if (this.timer > 0) {
+            timeBarArray[i] = character;
+            timeBarArray[timeBarArray.length - 1 - i] = character;
+          };
           title += '[' + timeBarArray.join('') + ']';
         } else {
           var exclamationString = this.titleTick % 2 == 0 ? '!-' : '-!';
           title = '[' + new Array(this.timeBarWidth/1.5).join(exclamationString) + 'GAME OVER' + new Array(this.timeBarWidth/1.5).join(exclamationString) + ']';
         }
         
-
         document.title = title;
       }
 
@@ -214,7 +217,7 @@ var util = {
 
       // background
       {
-        ctx.fillStyle = 'rgb(0, 0, 128)';
+        ctx.fillStyle = !this.gameover ? 'rgb(0, 0, 128)' : 'rgb(234, 234, 234)';
         ctx.fillRect(0, 0, canvas.width, canvas.height);
       }
 
@@ -248,12 +251,17 @@ var util = {
             }
           }
           
-          var sunGradient = ctx.createLinearGradient(gradientPositions[0], gradientPositions[1], gradientPositions[2], gradientPositions[3]);
-          sunGradient.addColorStop(0, 'rgba(255, 255, 255, ' + (closenessScalingFactor + 0.25) + ')');
-          sunGradient.addColorStop(closenessScalingFactor, 'rgba(255, 255, 255, 0)'); // stretch gradient based on distance to block
-          sunGradient.addColorStop(1, 'rgba(255, 255, 255, 0)');
-          ctx.fillStyle = sunGradient;
-          ctx.fillRect(0, 0, canvas.width, canvas.height);
+          // sun gradient
+          {
+            if (!this.gameover) {
+              var sunGradient = ctx.createLinearGradient(gradientPositions[0], gradientPositions[1], gradientPositions[2], gradientPositions[3]);
+              sunGradient.addColorStop(0, 'rgba(255, 255, 255, ' + (closenessScalingFactor + 0.25) + ')');
+              sunGradient.addColorStop(closenessScalingFactor, 'rgba(255, 255, 255, 0)'); // stretch gradient based on distance to block
+              sunGradient.addColorStop(1, 'rgba(255, 255, 255, 0)');
+              ctx.fillStyle = sunGradient;
+              ctx.fillRect(0, 0, canvas.width, canvas.height);
+            }
+          }
         }
       }
 
@@ -289,7 +297,7 @@ var util = {
             var viewportCoveringNone = !viewportCovering.left && !viewportCovering.top && !viewportCovering.right && !viewportCovering.bottom;
             // block coverage stuff
             {
-              if (viewportCoveringBlock) {
+              if (viewportCoveringBlock && !this.gameover) {
                 block.coverageTime += dt;
               } else {
                 block.coverageTime = 0;
@@ -303,6 +311,7 @@ var util = {
               {
                 var coveredColor = 'rgb(' + this.red + ', 0, 0)';
                 var uncoveredColor = 'rgb(255, 255, 255)';
+                if (this.gameover) coveredColor = uncoveredColor = 'rgb(171, 171, 171)';
 
                 if (viewportCoveringBlock || viewportCoveringNone) {
                   ctx.fillStyle = viewportCoveringBlock ? coveredColor : uncoveredColor;
@@ -348,9 +357,10 @@ var util = {
               // inner block fill
               {
                 ctx.fillStyle = viewportCoveringBlock ? 'rgb(255, 255, 255)' : 'rgb(0, 200, 0)';
+                if (this.gameover) ctx.fillStyle = 'rgb(213, 213, 213)';
                 ctx.fillRect(blockCoverTolerance, blockCoverTolerance, blockSize - blockCoverTolerance*2, blockSize - blockCoverTolerance*2);                
               }
-              // coverage indicator
+              // coverage filler
               {
                 if (block.coverageTime > 0 && block.coverageTime <= this.blockCoverageTimeMax) {
                   var blockCoverageIndicatorSize = (blockSize - blockCoverTolerance*2) * (block.coverageTime / this.blockCoverageTimeMax);
@@ -390,6 +400,7 @@ var util = {
             // activated block 
             {
               ctx.fillStyle = 'rgb(0, 128, 255)';
+              if (this.gameover) ctx.fillStyle = 'rgb(180, 180, 180)';
               ctx.fillRect(0, 0, blockSize, blockSize);
             }
 
