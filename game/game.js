@@ -1,6 +1,7 @@
 "use strict";
 // NEEDS util.js
 // NEEDS titlescript.js
+// NEEDS audio.js
 
 // the actual game runs in the popup
 (function() {
