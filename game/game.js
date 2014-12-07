@@ -146,6 +146,9 @@
       this.updatePopupSize();
       this.updatePopupPosition();
       this.updateViewportSize();
+      
+      // this is used in a lot of places so put it up here
+      var resizeBarSize = this.resizeBarSizeMax * (this.resizeEnergy / this.resizeEnergyMax);
 
       // animate to target viewport size with block centered
       {
@@ -228,15 +231,15 @@
           // sun gradient
           {
             if (!this.gameover) {
-              var maxAlpha = 0.75;
-              var minAlpha = 0.25;
+              var maxAlpha = 0.8;
+              var minAlpha = 0.1;
 
               var sunGradient = ctx.createLinearGradient(gradientPositions[0], gradientPositions[1], gradientPositions[2], gradientPositions[3]);
               sunGradient.addColorStop(0, 'rgba(255, 255, 255, ' + ((maxAlpha - minAlpha) * closenessScalingFactor + minAlpha) + ')');
               sunGradient.addColorStop(closenessScalingFactor, 'rgba(255, 255, 255, 0)'); // stretch gradient based on distance to block
               sunGradient.addColorStop(1, 'rgba(255, 255, 255, 0)');
               ctx.fillStyle = sunGradient;
-              ctx.fillRect(0, 0, canvas.width, canvas.height);
+              ctx.fillRect(resizeBarSize, resizeBarSize, canvas.width - resizeBarSize, canvas.height - resizeBarSize);
             }
           }
         }
@@ -251,7 +254,6 @@
         {
           var blockSize = this.blockSize;
           var blockCoverTolerance = this.blockCoverTolerance;
-          var resizeBarSize = this.resizeBarSizeMax * (this.resizeEnergy / this.resizeEnergyMax);
 
           this.red = ((this.red || 0) + 8) % 256;
 
