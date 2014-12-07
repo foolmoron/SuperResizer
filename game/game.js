@@ -78,6 +78,7 @@ var util = {
       this.viewportSize.y = w.innerHeight|| e.clientHeight|| g.clientHeight;
     },
 
+    freezeCameraPosition: false,
     onResize: function(e) {
       var deltas = {};
       deltas.left = (window.screenLeft || window.screenX) - this.popupPosition.x;
@@ -86,17 +87,20 @@ var util = {
       deltas.bottom = window.outerHeight - this.popupSize.y + deltas.top;
       this.updatePopupSize();
 
-      this.cameraPosition.x += deltas.left;
-      this.cameraPosition.y += deltas.top;
+      if (!this.freezeCameraPosition) {
+        this.cameraPosition.x += deltas.left;
+        this.cameraPosition.y += deltas.top;
+      }
     },
-
 
     blockSize: 200,
     blockCoverageTimeMax: 2,
     blockCoverTolerance: 15,
     blocks: [
-      { pos: [150, 150], coverageTime: 0, activated: false }
+      { pos: {x: 150, y: 150}, coverageTime: 0, activated: false }
     ],
+
+    targetSize: null, // should be object (x, y, sizePerFrame, targetCameraCenterInWorld) or null
 
     start: function() {
       window.game = this;
@@ -129,6 +133,30 @@ var util = {
       this.updatePopupPosition();
       this.updateViewportSize();
 
+      // animate to target viewport size with block centered
+      {
+        var targetSize = this.targetSize;
+        if (targetSize != null) {
+          this.freezeCameraPosition = true;
+
+          var diffX = targetSize.x - this.viewportSize.x;
+          var diffY = targetSize.y - this.viewportSize.y;
+          var changeX = (Math.abs(diffX) < targetSize.sizePerFrame) ? diffX : targetSize.sizePerFrame * Math.sign(diffX);
+          var changeY = (Math.abs(diffY) < targetSize.sizePerFrame) ? diffY : targetSize.sizePerFrame * Math.sign(diffY);
+
+          this.setViewportSize(this.viewportSize.x + changeX, this.viewportSize.y + changeY);
+          window.moveTo(this.popupPosition.x - changeX/2, this.popupPosition.y - changeY/2);
+          this.updatePopupPosition();
+          this.updateViewportSize();
+          this.cameraPosition.x = targetSize.targetCameraCenterInWorld.x - this.viewportSize.x/2;
+          this.cameraPosition.y = targetSize.targetCameraCenterInWorld.y - this.viewportSize.y/2;
+          if (this.viewportSize.x == targetSize.x && this.viewportSize.y == targetSize.y) {
+            this.targetSize = null;
+            this.freezeCameraPosition = false;
+          }
+        }
+      }
+
       // reset canvas
       {
         canvas.width = this.viewportSize.x;
@@ -153,8 +181,8 @@ var util = {
           if (block.activated)
             continue;
 
-          var distX = cameraCenterInWorld.x - block.pos[0];
-          var distY = cameraCenterInWorld.y - block.pos[1];
+          var distX = cameraCenterInWorld.x - block.pos.x;
+          var distY = cameraCenterInWorld.y - block.pos.y;
           var distToCameraCenter = Math.sqrt(distX * distX + distY * distY);
           var distNormalizeFactor = 500;
           distToCameraCenter = Math.max(distToCameraCenter, distNormalizeFactor);
@@ -202,8 +230,8 @@ var util = {
             // detect viewport covering block
             var viewportCoveringBlock = false;
             {
-              var blockOffsetLeft = block.pos[0] - this.cameraPosition.x;
-              var blockOffsetTop = block.pos[1] - this.cameraPosition.y;
+              var blockOffsetLeft = block.pos.x - this.cameraPosition.x;
+              var blockOffsetTop = block.pos.y - this.cameraPosition.y;
               if (blockOffsetLeft <= 0 && blockOffsetLeft <= blockCoverTolerance && blockOffsetTop <= 0 && blockOffsetTop <= blockCoverTolerance) {
                 var blockOffsetRight = blockSize - this.viewportSize.x + blockOffsetLeft;
                 var blockOffsetBottom = blockSize - this.viewportSize.y + blockOffsetTop;
@@ -222,7 +250,7 @@ var util = {
             }
             // draw block stuff
             {
-              ctx.translate(block.pos[0], block.pos[1])
+              ctx.translate(block.pos.x, block.pos.y)
 
               // actual block 
               {
@@ -241,8 +269,9 @@ var util = {
                   ctx.fillStyle = 'rgb(255, 255, 0)';
                   util.fillRectFromCenterAndSize(ctx, blockSize/2, blockSize/2, blockCoverageIndicatorSize, blockCoverageIndicatorSize);
                 } 
-                if (block.coverageTime >= this.blockCoverageTimeMax) {
+                if (!block.activated && block.coverageTime >= this.blockCoverageTimeMax) {
                   block.activated = true;
+                  this.targetSize = { x: this.resolution.y * 0.8, y: this.resolution.y * 0.8, sizePerFrame: 80, targetCameraCenterInWorld: { x: block.pos.x + blockSize/2, y: block.pos.y + blockSize/2 } };
                 }
               }
             }
