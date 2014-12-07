@@ -150,6 +150,8 @@ var util = {
 
         for (var i = 0; i < this.blocks.length; i++) {
           var block = this.blocks[i];
+          if (block.activated)
+            continue;
 
           var distX = cameraCenterInWorld.x - block.pos[0];
           var distY = cameraCenterInWorld.y - block.pos[1];
@@ -213,7 +215,7 @@ var util = {
             // block coverage stuff
             {
               if (viewportCoveringBlock) {
-                block.coverageTime = (block.coverageTime || 0) + dt;
+                block.coverageTime += dt;
               } else {
                 block.coverageTime = 0;
               }
@@ -234,12 +236,12 @@ var util = {
               }
               // coverage indicator
               {
-                if (!block.activated && block.CoverageTime > 0 && block.CoverageTime <= this.block.CoverageTimeMax) {
-                  var blockCoverageIndicatorSize = (blockSize - blockCoverTolerance*2) * (block.CoverageTime / this.block.CoverageTimeMax);
+                if (!block.activated && block.coverageTime > 0 && block.coverageTime <= this.blockCoverageTimeMax) {
+                  var blockCoverageIndicatorSize = (blockSize - blockCoverTolerance*2) * (block.coverageTime / this.blockCoverageTimeMax);
                   ctx.fillStyle = 'rgb(255, 255, 0)';
                   util.fillRectFromCenterAndSize(ctx, blockSize/2, blockSize/2, blockCoverageIndicatorSize, blockCoverageIndicatorSize);
                 } 
-                if (block.CoverageTime >= this.blockCoverageTimeMax) {
+                if (block.coverageTime >= this.blockCoverageTimeMax) {
                   block.activated = true;
                 }
               }
