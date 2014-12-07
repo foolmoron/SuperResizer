@@ -38,6 +38,14 @@
       this.viewportSize.y = w.innerHeight|| e.clientHeight|| g.clientHeight;
     },
 
+    setResizeEnergy: function(energy) {
+      if (energy > this.resizeEnergyMax)
+        energy = this.resizeEnergyMax;
+      if (energy < 0)
+        this.doGameover();
+      this.resizeEnergy = energy;
+    },
+
     disableOnResizeGameplayLogic: false,
     onResize: function(e) {
       var deltas = {};
@@ -55,14 +63,6 @@
         var deltasTotal = Math.abs(deltas.left) + Math.abs(deltas.right) + Math.abs(deltas.top) + Math.abs(deltas.bottom);
         this.setResizeEnergy(this.resizeEnergy - deltasTotal);
       }
-    },
-
-    setResizeEnergy: function(energy) {
-      if (energy > this.resizeEnergyMax)
-        energy = this.resizeEnergyMax;
-      if (energy < 0)
-        this.doGameover();
-      this.resizeEnergy = energy;
     },
 
     doGameover: function() {
@@ -84,14 +84,23 @@
 
     resizeEnergyMax: 10000,
     resizeEnergy: 10000,
-    resizeEnergyGainedFromBlock: 1000,
+    resizeEnergyGainedFromBlock: 2000,
+
+    // 1 block offset roughly translates into about 3.5 resize energy
+    getBlockOffsetMin: function(score) {
+      return interp.linear(300, 600, score/12);
+    },
+    getBlockOffsetMax: function(score) {
+      return interp.linear(350, 900, score/12);
+    },
 
     resizeBarSizeMax: 50,
     resizeBarColor: 'rgb(255, 255, 0)',
     resizeBarEnergyPerNotch: 1000,
 
     currentScore: 0,
-    scoresToSpawnExtraBlock: [3, 6, 10, 15],
+    scoresToSpawnExtraBlock: [3, 7, 12],
+    scoreIntervalToSpawnExtraBlock: 5,
 
     blockSize: 200,
     blockCoverageTimeMax: 1.25,
@@ -100,9 +109,6 @@
       { pos: {x: 150, y: 150}, coverageTime: 0 }
     ],
     activatedblocks: [],
-
-    newBlockOffsetMin: 700,
-    newBlockOffsetMax: 1000,
 
     targetSize: null, // should be object (x, y, sizePerFrame, targetCameraCenterInWorld) or null
 
@@ -222,8 +228,11 @@
           // sun gradient
           {
             if (!this.gameover) {
+              var maxAlpha = 0.75;
+              var minAlpha = 0.25;
+
               var sunGradient = ctx.createLinearGradient(gradientPositions[0], gradientPositions[1], gradientPositions[2], gradientPositions[3]);
-              sunGradient.addColorStop(0, 'rgba(255, 255, 255, ' + (closenessScalingFactor + 0.25) + ')');
+              sunGradient.addColorStop(0, 'rgba(255, 255, 255, ' + ((maxAlpha - minAlpha) * closenessScalingFactor + minAlpha) + ')');
               sunGradient.addColorStop(closenessScalingFactor, 'rgba(255, 255, 255, 0)'); // stretch gradient based on distance to block
               sunGradient.addColorStop(1, 'rgba(255, 255, 255, 0)');
               ctx.fillStyle = sunGradient;
@@ -366,12 +375,16 @@
                       if (this.scoresToSpawnExtraBlock[i] == this.currentScore)
                         numBlocksToSpawn++;
                     };
-                    if (this.currentScore > this.scoresToSpawnExtraBlock[this.scoresToSpawnExtraBlock.length - 1] && this.currentScore % 5 == 0) {
+                    if (this.currentScore > this.scoresToSpawnExtraBlock[this.scoresToSpawnExtraBlock.length - 1] 
+                      && this.currentScore % this.scoreIntervalToSpawnExtraBlock == 0) {
                       numBlocksToSpawn++;
                     }
 
+                    var newBlockOffsetMin = this.getBlockOffsetMin(this.currentScore);
+                    var newBlockOffsetMax = this.getBlockOffsetMax(this.currentScore);;
+
                     for (var i = 0; i < numBlocksToSpawn; i++) {
-                      var magnitude = (this.newBlockOffsetMax - this.newBlockOffsetMin) * Math.random() + this.newBlockOffsetMin;
+                      var magnitude = (newBlockOffsetMax - newBlockOffsetMin) * Math.random() + newBlockOffsetMin;
                       var directionRad = Math.random() * Math.PI * 2; 
                       var offsetX = Math.cos(directionRad) * magnitude;
                       var offsetY = Math.sin(directionRad) * magnitude;

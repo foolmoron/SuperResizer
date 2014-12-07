@@ -36,12 +36,17 @@ var util = {
   normalOfVector: function(x, y) {
     var magnitude = Math.sqrt(x * x + y + y);
     return { x: x / magnitude, y: y / magnitude };
+  },
+  clamp01: function(value) {
+    return Math.min(1, Math.max(0, value));
   }
 };
 
 // interpolation
 var interp = {
-  linear: function(a, b, t) { var i = t; return a*(1-i) + b*i; },
-  easeOutSine: function(a, b, t) { var i = Math.sin(t * Math.PI/2); return a*(1-i) + b*i; },
-  easeOutBack: function(a, b, t, strength) { var strength = strength || 1.5; t = t-1; var i = (t*t * ((strength + 1)*t + strength) + 1); return a + b*i; },
+  linear: function(a, b, t) { t = util.clamp01(t); var i = t; return a*(1-i) + b*i; },
+  easeOutSine: function(a, b, t) { t = util.clamp01(t); var i = Math.sin(t * Math.PI/2); return a*(1-i) + b*i; },
+  easeOutBack: function(a, b, t, strength) { t = util.clamp01(t); var strength = strength || 1.5; t = t-1; var i = (t*t * ((strength + 1)*t + strength) + 1); return a*(1-i) + b*i; },
+  easeOutCirc: function(a, b, t) { t = util.clamp01(t); var i = -Math.sqrt(1 - t*t) + 1; return a*(1-i) + b*i; },
+  easeInCubic: function(a, b, t) { t = util.clamp01(t); var i = t*t*t; return a*(1-i) + b*i; },
 };
