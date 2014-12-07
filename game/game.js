@@ -94,11 +94,15 @@ var util = {
     },
 
     blockSize: 200,
-    blockCoverageTimeMax: 2,
+    blockCoverageTimeMax: 1.25,
     blockCoverTolerance: 15,
     blocks: [
-      { pos: {x: 150, y: 150}, coverageTime: 0, activated: false }
+      { pos: {x: 150, y: 150}, coverageTime: 0 }
     ],
+    activatedblocks: [],
+
+    newBlockOffsetMin: 700,
+    newBlockOffsetMax: 1000,
 
     targetSize: null, // should be object (x, y, sizePerFrame, targetCameraCenterInWorld) or null
 
@@ -178,9 +182,6 @@ var util = {
 
         for (var i = 0; i < this.blocks.length; i++) {
           var block = this.blocks[i];
-          if (block.activated)
-            continue;
-
           var distX = cameraCenterInWorld.x - block.pos.x;
           var distY = cameraCenterInWorld.y - block.pos.y;
           var distToCameraCenter = Math.sqrt(distX * distX + distY * distY);
@@ -259,22 +260,54 @@ var util = {
               }
               // inner block fill
               {
-                ctx.fillStyle = block.activated ? 'rgb(0, 128, 255)' : viewportCoveringBlock ? 'rgb(255, 255, 255)' : 'rgb(0, 200, 0)';
+                ctx.fillStyle = viewportCoveringBlock ? 'rgb(255, 255, 255)' : 'rgb(0, 200, 0)';
                 ctx.fillRect(blockCoverTolerance, blockCoverTolerance, blockSize - blockCoverTolerance*2, blockSize - blockCoverTolerance*2);                
               }
               // coverage indicator
               {
-                if (!block.activated && block.coverageTime > 0 && block.coverageTime <= this.blockCoverageTimeMax) {
+                if (block.coverageTime > 0 && block.coverageTime <= this.blockCoverageTimeMax) {
                   var blockCoverageIndicatorSize = (blockSize - blockCoverTolerance*2) * (block.coverageTime / this.blockCoverageTimeMax);
                   ctx.fillStyle = 'rgb(255, 255, 0)';
                   util.fillRectFromCenterAndSize(ctx, blockSize/2, blockSize/2, blockCoverageIndicatorSize, blockCoverageIndicatorSize);
                 } 
-                if (!block.activated && block.coverageTime >= this.blockCoverageTimeMax) {
-                  block.activated = true;
-                  this.targetSize = { x: this.resolution.y * 0.8, y: this.resolution.y * 0.8, sizePerFrame: 80, targetCameraCenterInWorld: { x: block.pos.x + blockSize/2, y: block.pos.y + blockSize/2 } };
+                if (block.coverageTime >= this.blockCoverageTimeMax) {
+                  // modify block lists
+                  {
+                    this.activatedblocks.push(block);
+                    this.blocks.splice(this.blocks.indexOf(block), 1);
+                    i--;
+                  }
+                  // add new block at random offset
+                  {
+                    var magnitude = (this.newBlockOffsetMax - this.newBlockOffsetMin) * Math.random() + this.newBlockOffsetMin;
+                    var directionRad = Math.random() * Math.PI * 2; 
+                    var offsetX = Math.cos(directionRad) * magnitude;
+                    var offsetY = Math.sin(directionRad) * magnitude;
+                    console.log(offsetX, offsetY);
+                    console.log(block.pos.x + offsetX, block.pos.y + offsetY);
+                    this.blocks.push({ pos: {x: block.pos.x + offsetX, y: block.pos.y + offsetY}, coverageTime: 0 });
+                  }
+                  // kick off window sizing animation
+                  {
+                    this.targetSize = { x: this.resolution.y * 0.8, y: this.resolution.y * 0.8, sizePerFrame: 80, targetCameraCenterInWorld: { x: block.pos.x + blockSize/2, y: block.pos.y + blockSize/2 } };
+                  }
                 }
               }
             }
+            ctx.restore();
+          };
+
+          for (var i = 0; i < this.activatedblocks.length; i++) {
+            var activatedBlock = this.activatedblocks[i];
+            ctx.save();
+            ctx.translate(activatedBlock.pos.x, activatedBlock.pos.y)
+
+            // activated block 
+            {
+              ctx.fillStyle = 'rgb(0, 128, 255)';
+              ctx.fillRect(0, 0, blockSize, blockSize);
+            }
+
             ctx.restore();
           };
         }
