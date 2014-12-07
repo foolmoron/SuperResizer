@@ -17,7 +17,7 @@
       countdown.onclick = function(e) {
         countdown.innerHTML = "Launched!"
         clearInterval(countdownInterval);
-        window.open('./game', 'game', 'left=20, top=20, width=400, height=300'); // need to open game in a popup to allow JS to resize 
+        window.open('./game', 'game', 'left=20, top=20, width=400, height=300, resizable=1'); // need to open game in a popup to allow JS to resize 
       }
 
       this.update();

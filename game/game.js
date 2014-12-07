@@ -59,10 +59,111 @@
         this.cameraPosition.x += deltas.left;
         this.cameraPosition.y += deltas.top;
 
+        this.spawnResizeParticles(deltas);
+
         // draing resize energy
         var deltasTotal = Math.abs(deltas.left) + Math.abs(deltas.right) + Math.abs(deltas.top) + Math.abs(deltas.bottom);
         this.setResizeEnergy(this.resizeEnergy - deltasTotal);
       }
+    },
+
+    spawnResizeParticles: function(resizeDeltas) {
+      var resizeBarSize = this.resizeBarSizeMax * (this.resizeEnergy / this.resizeEnergyMax);
+
+      var newSquareOffsets = [];
+      var newWaveStartPos = [];
+      var newWaveEndPos = [];
+      var newWaveHorizontals = [];
+      if (resizeDeltas.left < 0) { // squares out left
+        var squaresX = Math.ceil(-resizeDeltas.left / this.resizeOutSquareSizeMax);
+        var squaresY = Math.ceil(this.viewportSize.y / this.resizeOutSquareSizeMax);
+        for (var i = 0; i < squaresX; i++) {
+          for (var j = 0; j < squaresY; j++) {
+            newSquareOffsets.push({x: (-i + 1) * this.resizeOutSquareSizeMax + resizeBarSize/2, y: j * this.resizeOutSquareSizeMax});
+          };
+        };
+      } else if (resizeDeltas.left > 0) { // wave in left
+        var wavesX = Math.ceil(resizeDeltas.left / this.resizeInWaveWidth);
+        var wavesY = Math.ceil(this.viewportSize.y / this.resizeInWaveWidth);
+        for (var i = 0; i < wavesX; i++) {
+          for (var j = 0; j < wavesY; j++) {
+            var startPos = {x: (-i + 1) * this.resizeInWaveHeightMax + resizeBarSize/2, y: j * this.resizeInWaveWidth};
+            newWaveStartPos.push(startPos);
+            newWaveEndPos.push({x: startPos.x + this.resizeInWaveMovement, y: startPos.y });
+            newWaveHorizontals.push(false);
+          };
+        };
+      }
+      if (resizeDeltas.right > 0) { // squares out right
+        var squaresX = Math.ceil(resizeDeltas.right / this.resizeOutSquareSizeMax);
+        var squaresY = Math.ceil(this.viewportSize.y / this.resizeOutSquareSizeMax);
+        for (var i = 0; i < squaresX; i++) {
+          for (var j = 0; j < squaresY; j++) {
+            newSquareOffsets.push({x: (-i - 2) * this.resizeOutSquareSizeMax + this.viewportSize.x - resizeBarSize/2, y: j * this.resizeOutSquareSizeMax});
+          };
+        };
+      } else if (resizeDeltas.right < 0) { // waves in right
+        var wavesX = Math.ceil(-resizeDeltas.right / this.resizeInWaveWidth);
+        var wavesY = Math.ceil(this.viewportSize.y / this.resizeInWaveWidth);
+        for (var i = 0; i < wavesX; i++) {
+          for (var j = 0; j < wavesY; j++) {
+            var startPos = {x: (-i -3) * this.resizeInWaveHeightMax + this.viewportSize.x - resizeBarSize/2, y: j * this.resizeInWaveWidth};
+            newWaveStartPos.push(startPos);
+            newWaveEndPos.push({x: startPos.x - this.resizeInWaveMovement, y: startPos.y });
+            newWaveHorizontals.push(false);
+          };
+        };
+      }
+      if (resizeDeltas.top < 0) { // squares out top
+        var squaresX = Math.ceil(this.viewportSize.x / this.resizeOutSquareSizeMax);
+        var squaresY = Math.ceil(-resizeDeltas.top / this.resizeOutSquareSizeMax);
+        for (var i = 0; i < squaresX; i++) {
+          for (var j = 0; j < squaresY; j++) {
+            newSquareOffsets.push({x: i * this.resizeOutSquareSizeMax, y: (-j + 1) * this.resizeOutSquareSizeMax + resizeBarSize/2});
+          };
+        };
+      } else if (resizeDeltas.top > 0) { // waves in top
+        var wavesX = Math.ceil(this.viewportSize.x / this.resizeInWaveWidth);
+        var wavesY = Math.ceil(resizeDeltas.top / this.resizeInWaveWidth);
+        for (var i = 0; i < wavesX; i++) {
+          for (var j = 0; j < wavesY; j++) {
+            var startPos = {x: i * this.resizeInWaveWidth, y: (-j + 2) * this.resizeInWaveHeightMax + resizeBarSize/2};
+            newWaveStartPos.push(startPos);
+            newWaveEndPos.push({x: startPos.x, y: startPos.y + this.resizeInWaveMovement });
+            newWaveHorizontals.push(true);
+          };
+        };
+      }
+      if (resizeDeltas.bottom > 0) { // squares out bottom
+        var squaresX = Math.ceil(this.viewportSize.x / this.resizeOutSquareSizeMax);
+        var squaresY = Math.ceil(resizeDeltas.bottom / this.resizeOutSquareSizeMax);
+        for (var i = 0; i < squaresX; i++) {
+          for (var j = 0; j < squaresY; j++) {
+            newSquareOffsets.push({x: i * this.resizeOutSquareSizeMax, y: (-j - 2) * this.resizeOutSquareSizeMax + this.viewportSize.y - resizeBarSize/2});
+          };
+        };
+      } else if (resizeDeltas.bottom < 0) { // waves in bottom
+        var wavesX = Math.ceil(this.viewportSize.x / this.resizeInWaveWidth);
+        var wavesY = Math.ceil(-resizeDeltas.bottom / this.resizeInWaveWidth);
+        for (var i = 0; i < wavesX; i++) {
+          for (var j = 0; j < wavesY; j++) {
+            var startPos = {x: i * this.resizeInWaveWidth, y: (-j - 3) * this.resizeInWaveHeightMax + this.viewportSize.y - resizeBarSize/2};
+            newWaveStartPos.push(startPos);
+            newWaveEndPos.push({x: startPos.x, y: startPos.y - this.resizeInWaveMovement });
+            newWaveHorizontals.push(true);
+          };
+        };
+      }
+
+      for (var i = 0; i < newSquareOffsets.length; i++) {
+        var newPos = { x: this.cameraPosition.x + newSquareOffsets[i].x, y: this.cameraPosition.y + newSquareOffsets[i].y };
+        this.resizeOutSquares.push({ pos: newPos, lifeSeconds: ((this.resizeOutSquareLifeMax - this.resizeOutSquareLifeMin) * Math.random() + this.resizeOutSquareLifeMin) });
+      };
+      for (var i = 0; i < newWaveStartPos.length; i++) {
+        var newStartPos = { x: this.cameraPosition.x + newWaveStartPos[i].x, y: this.cameraPosition.y + newWaveStartPos[i].y };
+        var newEndPos = { x: this.cameraPosition.x + newWaveEndPos[i].x, y: this.cameraPosition.y + newWaveEndPos[i].y };
+        this.resizeInWaves.push({ startPos: newStartPos, endPos: newEndPos, horizontal: newWaveHorizontals[i], lifeSeconds: ((this.resizeInWaveLifeMax - this.resizeInWaveLifeMin) * Math.random() + this.resizeInWaveLifeMin) });
+      };
     },
 
     doGameover: function() {
@@ -109,6 +210,18 @@
       { pos: {x: 150, y: 150}, coverageTime: 0 }
     ],
     activatedblocks: [],
+
+    resizeOutSquareSizeMax: 20,
+    resizeOutSquareLifeMax: 1,
+    resizeOutSquareLifeMin: 0.2,
+    resizeOutSquares: [], // {pos: {x, y}, lifeSeconds}
+
+    resizeInWaveWidth: 50,
+    resizeInWaveHeightMax: 10,
+    resizeInWaveMovement: 30,
+    resizeInWaveLifeMax: 1,
+    resizeInWaveLifeMin: 0.2,
+    resizeInWaves: [], // {startPos: {x, y}, endPos: {x, y}, horizontal, lifeSeconds}
 
     targetSize: null, // should be object (x, y, sizePerFrame, targetCameraCenterInWorld) or null
 
@@ -158,8 +271,8 @@
 
           var diffX = targetSize.x - this.viewportSize.x;
           var diffY = targetSize.y - this.viewportSize.y;
-          var changeX = (Math.abs(diffX) < targetSize.sizePerFrame) ? diffX : targetSize.sizePerFrame * Math.sign(diffX);
-          var changeY = (Math.abs(diffY) < targetSize.sizePerFrame) ? diffY : targetSize.sizePerFrame * Math.sign(diffY);
+          var changeX = (Math.abs(diffX) < targetSize.sizePerFrame) ? diffX : targetSize.sizePerFrame * (diffX < 0 ? -1 : 1);
+          var changeY = (Math.abs(diffY) < targetSize.sizePerFrame) ? diffY : targetSize.sizePerFrame * (diffY < 0 ? -1 : 1);
 
           this.setViewportSize(this.viewportSize.x + changeX, this.viewportSize.y + changeY);
           window.moveTo(this.popupPosition.x - changeX/2, this.popupPosition.y - changeY/2);
@@ -167,7 +280,7 @@
           this.updateViewportSize();
           this.cameraPosition.x = targetSize.targetCameraCenterInWorld.x - this.viewportSize.x/2;
           this.cameraPosition.y = targetSize.targetCameraCenterInWorld.y - this.viewportSize.y/2;
-          if (this.viewportSize.x == targetSize.x && this.viewportSize.y == targetSize.y) {
+          if (this.viewportSize.x == Math.floor(targetSize.x) && this.viewportSize.y == Math.floor(targetSize.y)) {
             this.targetSize = null;
             this.disableOnResizeGameplayLogic = false;
           }
@@ -402,47 +515,102 @@
           };
         }
 
+        // update/draw resize particles
+        {
+          for (var i = 0; i < this.resizeOutSquares.length; i++) {
+            var square = this.resizeOutSquares[i];           
+            square.lifeSeconds -= dt;
+            if (square.lifeSeconds <= 0) {
+              this.resizeOutSquares.splice(this.resizeOutSquares.indexOf(square), 1);
+              i--;
+            }
+          }
+          for (var i = 0; i < this.resizeInWaves.length; i++) {
+            var waves = this.resizeInWaves[i];           
+            waves.lifeSeconds -= dt;
+            if (waves.lifeSeconds <= 0) {
+              this.resizeInWaves.splice(this.resizeInWaves.indexOf(waves), 1);
+              i--;
+            }
+          }
+
+          if (!this.gameover) {
+            var squareSizeMax = this.resizeOutSquareSizeMax;
+            for (var i = 0; i < this.resizeOutSquares.length; i++) {
+              var square = this.resizeOutSquares[i];
+              ctx.save();
+              ctx.translate(square.pos.x, square.pos.y);
+
+              var squareSize = squareSizeMax * square.lifeSeconds / this.resizeOutSquareLifeMax;
+              ctx.fillStyle = 'rgb(255, 0, 255)';
+              ctx.fillRect(squareSizeMax - squareSize, squareSizeMax - squareSize, squareSize, squareSize);  
+
+              ctx.restore();
+            };
+            var waveHeightMax = this.resizeInWaveHeightMax;
+            for (var i = 0; i < this.resizeInWaves.length; i++) {
+              var wave = this.resizeInWaves[i];
+              ctx.save();
+
+              var t = wave.lifeSeconds / this.resizeInWaveLifeMax;
+              ctx.translate(interp.easeOutQuint(wave.startPos.x, wave.endPos.x, 1-t), interp.easeOutQuint(wave.startPos.y, wave.endPos.y, 1-t));
+
+              var waveHeight = waveHeightMax * t;
+              ctx.fillStyle = 'rgb(255, 0, 255)';
+              if (wave.horizontal) {
+                ctx.fillRect(0, waveHeightMax - waveHeight, this.resizeInWaveWidth, waveHeight);
+              } else {
+                ctx.fillRect(waveHeightMax - waveHeight, 0, waveHeight, this.resizeInWaveWidth);
+              }
+
+              ctx.restore();
+            };
+          }
+        }
+
         // back to screen space
         ctx.restore();
       }
 
       // energy bar border around screen
       {
-        ctx.save();
+        if (!this.gameover) {
+          ctx.save();
 
-        ctx.lineWidth = resizeBarSize * 2;
-        ctx.strokeStyle = this.resizeBarColor;
-        ctx.beginPath();
-        ctx.moveTo(0, 0);
-        ctx.lineTo(this.viewportSize.x, 0);
-        ctx.lineTo(this.viewportSize.x, this.viewportSize.y);
-        ctx.lineTo(0, this.viewportSize.y);
-        ctx.lineTo(0, 0);
-        ctx.stroke();
+          ctx.lineWidth = resizeBarSize * 2;
+          ctx.strokeStyle = this.resizeBarColor;
+          ctx.beginPath();
+          ctx.moveTo(0, 0);
+          ctx.lineTo(this.viewportSize.x, 0);
+          ctx.lineTo(this.viewportSize.x, this.viewportSize.y);
+          ctx.lineTo(0, this.viewportSize.y);
+          ctx.lineTo(0, 0);
+          ctx.stroke();
 
-        // little notches to help gauge how much energy you have left
-        {
-          var notches = Math.floor(this.resizeEnergy / this.resizeBarEnergyPerNotch);
-          var maxNotches = this.resizeEnergyMax / this.resizeBarEnergyPerNotch;
-          var pixelsPerNotch = this.resizeBarSizeMax * (1 / maxNotches);
-          ctx.lineWidth = 1;
+          // little notches to help gauge how much energy you have left
+          {
+            var notches = Math.floor(this.resizeEnergy / this.resizeBarEnergyPerNotch);
+            var maxNotches = this.resizeEnergyMax / this.resizeBarEnergyPerNotch;
+            var pixelsPerNotch = this.resizeBarSizeMax * (1 / maxNotches);
+            ctx.lineWidth = 1;
 
-          var notchRed = Math.floor(interp.linear(255, 180, notches / maxNotches));
-          var notchGreen = Math.floor(interp.linear(0, 180, notches / maxNotches));
-          ctx.strokeStyle = 'rgb(' + notchRed + ', ' + notchGreen + ', 0)';
-          for (var i = 0; i < notches; i++) {
-            var notchOffset = pixelsPerNotch * (i + 1); // add 1 to i to make notch for inner-most meter but not for outer-most
-            ctx.beginPath();
-            ctx.moveTo(notchOffset, notchOffset);
-            ctx.lineTo(this.viewportSize.x - notchOffset, notchOffset);
-            ctx.lineTo(this.viewportSize.x - notchOffset, this.viewportSize.y - notchOffset);
-            ctx.lineTo(notchOffset, this.viewportSize.y - notchOffset);
-            ctx.lineTo(notchOffset, notchOffset);
-            ctx.stroke();
-          };
+            var notchRed = Math.floor(interp.linear(255, 180, notches / maxNotches));
+            var notchGreen = Math.floor(interp.linear(0, 180, notches / maxNotches));
+            ctx.strokeStyle = 'rgb(' + notchRed + ', ' + notchGreen + ', 0)';
+            for (var i = 0; i < notches; i++) {
+              var notchOffset = pixelsPerNotch * (i + 1); // add 1 to i to make notch for inner-most meter but not for outer-most
+              ctx.beginPath();
+              ctx.moveTo(notchOffset, notchOffset);
+              ctx.lineTo(this.viewportSize.x - notchOffset, notchOffset);
+              ctx.lineTo(this.viewportSize.x - notchOffset, this.viewportSize.y - notchOffset);
+              ctx.lineTo(notchOffset, this.viewportSize.y - notchOffset);
+              ctx.lineTo(notchOffset, notchOffset);
+              ctx.stroke();
+            };
+          }
+
+          ctx.restore();
         }
-
-        ctx.restore();
       }
 
       ctx.restore(); // restore default ctx
