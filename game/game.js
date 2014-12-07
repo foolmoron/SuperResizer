@@ -92,13 +92,11 @@ var util = {
 
 
     blockSize: 200,
-    blockPositions: [
-        [150, 150]
-      ],
     blockCoverageTimeMax: 2,
     blockCoverTolerance: 15,
-    blockCoverageTimes: [], // sparse array of seconds of coverage for each block
-    blocksActivated: [], // sparse array with bool for activation state of each block 
+    blocks: [
+      { pos: [150, 150], coverageTime: 0, activated: false }
+    ],
 
     start: function() {
       window.game = this;
@@ -150,11 +148,11 @@ var util = {
 
         var cameraCenterInWorld = { x: this.cameraPosition.x + this.viewportSize.x/2, y: this.cameraPosition.y + this.viewportSize.y/2 };
 
-        for (var i = 0; i < this.blockPositions.length; i++) {
-          var blockPosition = this.blockPositions[i];
+        for (var i = 0; i < this.blocks.length; i++) {
+          var block = this.blocks[i];
 
-          var distX = cameraCenterInWorld.x - blockPosition[0];
-          var distY = cameraCenterInWorld.y - blockPosition[1];
+          var distX = cameraCenterInWorld.x - block.pos[0];
+          var distY = cameraCenterInWorld.y - block.pos[1];
           var distToCameraCenter = Math.sqrt(distX * distX + distY * distY);
           var distNormalizeFactor = 500;
           distToCameraCenter = Math.max(distToCameraCenter, distNormalizeFactor);
@@ -196,14 +194,14 @@ var util = {
 
           this.red = ((this.red || 0) + 8) % 256;
 
-          for (var i = 0; i < this.blockPositions.length; i++) {
-            var blockPosition = this.blockPositions[i];
+          for (var i = 0; i < this.blocks.length; i++) {
+            var block = this.blocks[i];
             ctx.save();
             // detect viewport covering block
             var viewportCoveringBlock = false;
             {
-              var blockOffsetLeft = blockPosition[0] - this.cameraPosition.x;
-              var blockOffsetTop = blockPosition[1] - this.cameraPosition.y;
+              var blockOffsetLeft = block.pos[0] - this.cameraPosition.x;
+              var blockOffsetTop = block.pos[1] - this.cameraPosition.y;
               if (blockOffsetLeft <= 0 && blockOffsetLeft <= blockCoverTolerance && blockOffsetTop <= 0 && blockOffsetTop <= blockCoverTolerance) {
                 var blockOffsetRight = blockSize - this.viewportSize.x + blockOffsetLeft;
                 var blockOffsetBottom = blockSize - this.viewportSize.y + blockOffsetTop;
@@ -215,14 +213,14 @@ var util = {
             // block coverage stuff
             {
               if (viewportCoveringBlock) {
-                this.blockCoverageTimes[i] = (this.blockCoverageTimes[i] || 0) + dt;
+                block.coverageTime = (block.coverageTime || 0) + dt;
               } else {
-                this.blockCoverageTimes[i] = 0;
+                block.coverageTime = 0;
               }
             }
             // draw block stuff
             {
-              ctx.translate(blockPosition[0], blockPosition[1])
+              ctx.translate(block.pos[0], block.pos[1])
 
               // actual block 
               {
@@ -231,19 +229,18 @@ var util = {
               }
               // inner block fill
               {
-                ctx.fillStyle = this.blocksActivated[i] ? 'rgb(0, 128, 255)' : viewportCoveringBlock ? 'rgb(255, 255, 255)' : 'rgb(0, 200, 0)';
+                ctx.fillStyle = block.activated ? 'rgb(0, 128, 255)' : viewportCoveringBlock ? 'rgb(255, 255, 255)' : 'rgb(0, 200, 0)';
                 ctx.fillRect(blockCoverTolerance, blockCoverTolerance, blockSize - blockCoverTolerance*2, blockSize - blockCoverTolerance*2);                
               }
               // coverage indicator
               {
-                var blockCoverageTime = this.blockCoverageTimes[i];
-                if (!this.blocksActivated[i] && blockCoverageTime > 0 && blockCoverageTime <= this.blockCoverageTimeMax) {
-                  var blockCoverageIndicatorSize = (blockSize - blockCoverTolerance*2) * (blockCoverageTime / this.blockCoverageTimeMax);
+                if (!block.activated && block.CoverageTime > 0 && block.CoverageTime <= this.block.CoverageTimeMax) {
+                  var blockCoverageIndicatorSize = (blockSize - blockCoverTolerance*2) * (block.CoverageTime / this.block.CoverageTimeMax);
                   ctx.fillStyle = 'rgb(255, 255, 0)';
                   util.fillRectFromCenterAndSize(ctx, blockSize/2, blockSize/2, blockCoverageIndicatorSize, blockCoverageIndicatorSize);
                 } 
-                if (blockCoverageTime >= this.blockCoverageTimeMax) {
-                  this.blocksActivated[i] = true;
+                if (block.CoverageTime >= this.blockCoverageTimeMax) {
+                  block.activated = true;
                 }
               }
             }
