@@ -229,18 +229,20 @@ var util = {
             var block = this.blocks[i];
             ctx.save();
             // detect viewport covering block
-            var viewportCoveringBlock = false;
+            var viewportCovering = { left: false, top: false, right: false, bottom: false };
             {
               var blockOffsetLeft = block.pos.x - this.cameraPosition.x;
               var blockOffsetTop = block.pos.y - this.cameraPosition.y;
-              if (blockOffsetLeft <= 0 && blockOffsetLeft <= blockCoverTolerance && blockOffsetTop <= 0 && blockOffsetTop <= blockCoverTolerance) {
-                var blockOffsetRight = blockSize - this.viewportSize.x + blockOffsetLeft;
-                var blockOffsetBottom = blockSize - this.viewportSize.y + blockOffsetTop;
-                if (blockOffsetRight >= 0 && blockOffsetRight <= blockCoverTolerance && blockOffsetBottom >= 0 && blockOffsetBottom <= blockCoverTolerance) {
-                  viewportCoveringBlock = true;
-                }
-              }
+              viewportCovering.left = blockOffsetLeft <= 0 && Math.abs(blockOffsetLeft) <= blockCoverTolerance;
+              viewportCovering.top = blockOffsetTop <= 0 && Math.abs(blockOffsetTop) <= blockCoverTolerance;
+
+              var blockOffsetRight = blockSize - this.viewportSize.x + blockOffsetLeft;
+              var blockOffsetBottom = blockSize - this.viewportSize.y + blockOffsetTop;
+              viewportCovering.right = blockOffsetRight >= 0 && blockOffsetRight <= blockCoverTolerance;
+              viewportCovering.bottom = blockOffsetBottom >= 0 && blockOffsetBottom <= blockCoverTolerance;
             }
+            var viewportCoveringBlock = viewportCovering.left && viewportCovering.top && viewportCovering.right && viewportCovering.bottom;
+            var viewportCoveringNone = !viewportCovering.left && !viewportCovering.top && !viewportCovering.right && !viewportCovering.bottom;
             // block coverage stuff
             {
               if (viewportCoveringBlock) {
@@ -253,10 +255,51 @@ var util = {
             {
               ctx.translate(block.pos.x, block.pos.y)
 
-              // actual block 
+              // coverage indicators 
               {
-                ctx.fillStyle = 'rgb(' + this.red + ', 0, 0)';
-                ctx.fillRect(0, 0, blockSize, blockSize);
+                var coveredColor = 'rgb(' + this.red + ', 0, 0)';
+                var uncoveredColor = 'rgb(255, 255, 255)';
+
+                if (viewportCoveringBlock || viewportCoveringNone) {
+                  ctx.fillStyle = viewportCoveringBlock ? coveredColor : uncoveredColor;
+                  ctx.fillRect(0, 0, blockSize, blockSize);
+                } else {
+                  var completeTriangleAndStartNew = function(ctx, color) {
+                    ctx.lineTo(blockSize/2, blockSize/2);
+                    ctx.fill();
+                    ctx.fillStyle = color;
+                    ctx.beginPath();
+                  }
+
+                  // top
+                  ctx.fillStyle = viewportCovering.top ? coveredColor : uncoveredColor;
+                  ctx.beginPath();
+                  ctx.moveTo(0, 0);
+                  ctx.lineTo(blockSize, 0);
+                  ctx.lineTo(blockSize/2, blockSize/2);
+                  ctx.fill();
+                  // left
+                  ctx.fillStyle = viewportCovering.left ? coveredColor : uncoveredColor;
+                  ctx.beginPath();
+                  ctx.moveTo(0, 0);
+                  ctx.lineTo(0, blockSize);
+                  ctx.lineTo(blockSize/2, blockSize/2);
+                  ctx.fill();
+                  // right
+                  ctx.fillStyle = viewportCovering.right ? coveredColor : uncoveredColor;
+                  ctx.beginPath();
+                  ctx.moveTo(blockSize, 0);
+                  ctx.lineTo(blockSize, blockSize);
+                  ctx.lineTo(blockSize/2, blockSize/2);
+                  ctx.fill();
+                  // bottom
+                  ctx.fillStyle = viewportCovering.bottom ? coveredColor : uncoveredColor;
+                  ctx.beginPath();
+                  ctx.moveTo(0, blockSize);
+                  ctx.lineTo(blockSize, blockSize);
+                  ctx.lineTo(blockSize/2, blockSize/2);
+                  ctx.fill();
+                }
               }
               // inner block fill
               {
