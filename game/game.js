@@ -197,7 +197,8 @@ var util = {
         if (this.timer > 0) {
           title += '[' + timeBarArray.join('') + ']';
         } else {
-          title = '[-------------GAME OVER-------------]';
+          var exclamationString = this.titleTick % 2 == 0 ? '!-' : '-!';
+          title = '[' + new Array(this.timeBarWidth/1.5).join(exclamationString) + 'GAME OVER' + new Array(this.timeBarWidth/1.5).join(exclamationString) + ']';
         }
         
 
