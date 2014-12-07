@@ -93,6 +93,15 @@ var util = {
       }
     },
 
+    timerMax: 60,
+    timer: 60,
+    timeGainedFromBlock: 10,
+
+    timeBarWidth: 90,
+    timeBarClocks: ['🕛','🕐','🕑','🕒','🕓','🕔','🕕','🕖','🕗','🕘','🕙','🕚'],
+    timeBarFilledCircle: '🌑',
+    timeBarEmptyCircle: '🌕',
+
     blockSize: 200,
     blockCoverageTimeMax: 1.25,
     blockCoverTolerance: 15,
@@ -126,7 +135,7 @@ var util = {
     update: function(timestamp) {
       var self = this;
 
-      var dtmillis = this.previousTimestamp == 0 ? 0 : timestamp - this.previousTimestamp;
+      var dtmillis = (timestamp && this.previousTimestamp) ? timestamp - this.previousTimestamp : 0;
       var dt = dtmillis / 1000;
       this.previousTimestamp = timestamp;
 
@@ -159,6 +168,40 @@ var util = {
             this.freezeCameraPosition = false;
           }
         }
+      }
+
+      // countdown timer
+      {
+        this.timer -= dt;
+      }
+
+      // animate title
+      {
+        var title = '';
+        this.titleTick = ((this.titleTick || 0) + 1) % 100;
+
+        var timeBarArray = new Array(this.timeBarWidth + 1).join('.').split('');
+        var currentTimeOrbIndex = Math.floor((this.timeBarWidth / 2) * (1 - this.timer / this.timerMax));
+
+        var clock = this.timeBarClocks[Math.floor(this.titleTick/10)];
+        for (var i = 0; i < (this.timeBarWidth / 2); i++) {
+          var character;
+          if (i == currentTimeOrbIndex) character = clock;
+          else if (i < currentTimeOrbIndex) character = this.timeBarEmptyCircle;
+          else if (i > currentTimeOrbIndex) character = this.timeBarFilledCircle;
+
+          timeBarArray[i] = character;
+          timeBarArray[timeBarArray.length - 1 - i] = character;
+        };
+
+        if (this.timer > 0) {
+          title += '[' + timeBarArray.join('') + ']';
+        } else {
+          title = '[-------------GAME OVER-------------]';
+        }
+        
+
+        document.title = title;
       }
 
       // reset canvas
@@ -330,10 +373,8 @@ var util = {
                     console.log(block.pos.x + offsetX, block.pos.y + offsetY);
                     this.blocks.push({ pos: {x: block.pos.x + offsetX, y: block.pos.y + offsetY}, coverageTime: 0 });
                   }
-                  // kick off window sizing animation
-                  {
-                    this.targetSize = { x: this.resolution.y * 0.8, y: this.resolution.y * 0.8, sizePerFrame: 80, targetCameraCenterInWorld: { x: block.pos.x + blockSize/2, y: block.pos.y + blockSize/2 } };
-                  }
+                  this.timer += this.timeGainedFromBlock;
+                  this.targetSize = { x: this.resolution.y * 0.8, y: this.resolution.y * 0.8, sizePerFrame: 80, targetCameraCenterInWorld: { x: block.pos.x + blockSize/2, y: block.pos.y + blockSize/2 } };
                 }
               }
             }
