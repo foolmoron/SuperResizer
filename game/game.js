@@ -42,6 +42,11 @@ var util = {
   }
 };
 
+// interpolation
+var interp = {
+  linear: function(a, b, t) { return a * (1-t) + b*t; }
+};
+
 // the actual game that runs in the popup
 (function() {
   var game = {
@@ -78,7 +83,7 @@ var util = {
       this.viewportSize.y = w.innerHeight|| e.clientHeight|| g.clientHeight;
     },
 
-    freezeCameraPosition: false,
+    disableOnResizeGameplayLogic: false,
     onResize: function(e) {
       var deltas = {};
       deltas.left = (window.screenLeft || window.screenX) - this.popupPosition.x;
@@ -87,21 +92,51 @@ var util = {
       deltas.bottom = window.outerHeight - this.popupSize.y + deltas.top;
       this.updatePopupSize();
 
-      if (!this.freezeCameraPosition) {
+      if (!this.disableOnResizeGameplayLogic) {
         this.cameraPosition.x += deltas.left;
         this.cameraPosition.y += deltas.top;
+
+        // draing resize energy
+        var deltasTotal = Math.abs(deltas.left) + Math.abs(deltas.right) + Math.abs(deltas.top) + Math.abs(deltas.bottom);
+        this.setResizeEnergy(this.resizeEnergy - deltasTotal);
       }
     },
 
-    timerMax: 60,
-    timer: 60,
-    timeGainedFromBlock: 10,
-    currentScore: 0,
+    setResizeEnergy: function(energy) {
+      if (energy > this.resizeEnergyMax)
+        energy = this.resizeEnergyMax;
+      if (energy < 0)
+        this.doGameover();
+      this.resizeEnergy = energy;
+    },
 
-    timeBarWidth: 90,
-    timeBarClocks: ['🕛','🕐','🕑','🕒','🕓','🕔','🕕','🕖','🕗','🕘','🕙','🕚'],
-    timeBarFilledCircle: '🌑',
-    timeBarEmptyCircle: '🌕',
+    doGameover: function() {
+      var self = this;
+
+      this.gameover = true;
+      this.gameoverElement.style.display = 'block';
+
+      localStorage.setItem('best', Math.max(localStorage.getItem('best') || 0, this.currentScore));
+      this.currentScoreElement.innerHTML = this.currentScore;
+      this.bestScoreElement.innerHTML = localStorage.getItem('best');
+
+      var centerMessage = function() {
+        self.gameoverElement.style.marginTop = ((self.viewportSize.y - self.gameoverElement.offsetHeight) / 2) + 'px';
+        requestAnimationFrame(centerMessage);
+      };
+      centerMessage();
+    },
+
+    resizeEnergyMax: 10000,
+    resizeEnergy: 10000,
+    resizeEnergyGainedFromBlock: 1000,
+
+    resizeBarSizeMax: 50,
+    resizeBarColor: 'rgb(255, 255, 0)',
+    resizeBarEnergyPerNotch: 1000,
+
+    currentScore: 0,
+    scoresToSpawnExtraBlock: [3, 6, 10, 15],
 
     blockSize: 200,
     blockCoverageTimeMax: 1.25,
@@ -155,7 +190,7 @@ var util = {
       {
         var targetSize = this.targetSize;
         if (targetSize != null) {
-          this.freezeCameraPosition = true;
+          this.disableOnResizeGameplayLogic = true;
 
           var diffX = targetSize.x - this.viewportSize.x;
           var diffY = targetSize.y - this.viewportSize.y;
@@ -170,25 +205,8 @@ var util = {
           this.cameraPosition.y = targetSize.targetCameraCenterInWorld.y - this.viewportSize.y/2;
           if (this.viewportSize.x == targetSize.x && this.viewportSize.y == targetSize.y) {
             this.targetSize = null;
-            this.freezeCameraPosition = false;
+            this.disableOnResizeGameplayLogic = false;
           }
-        }
-      }
-
-      // countdown timer & gameover stuff
-      {
-        if (!this.gameover) {
-          this.timer -= dt;
-          if (this.timer < 0) {
-            this.gameover = true;
-            this.gameoverElement.style.display = 'block';
-
-            localStorage.setItem('best', Math.max(localStorage.getItem('best') || 0, this.currentScore));
-            this.currentScoreElement.innerHTML = this.currentScore;
-            this.bestScoreElement.innerHTML = localStorage.getItem('best');
-          }
-        } else {
-          this.gameoverElement.style.marginTop = ((this.viewportSize.y - this.gameoverElement.offsetHeight) / 2) + 'px';
         }
       }
 
@@ -198,23 +216,7 @@ var util = {
         this.titleTick = ((this.titleTick || 0) + 1) % 100;
 
         if (!this.gameover) {
-          var timeBarArray = new Array(this.timeBarWidth + 1).join('.').split('');
-          var currentTimeOrbIndex = Math.floor((this.timeBarWidth / 2) * (1 - this.timer / this.timerMax));
-
-          var clock = this.timeBarClocks[Math.floor(this.titleTick/10)];
-          for (var i = 0; i < (this.timeBarWidth / 2); i++) {
-            var character;
-            if (i == currentTimeOrbIndex) character = clock;
-            else if (i < currentTimeOrbIndex) character = this.timeBarEmptyCircle;
-            else if (i > currentTimeOrbIndex) character = this.timeBarFilledCircle;
-
-            timeBarArray[i] = character;
-            timeBarArray[timeBarArray.length - 1 - i] = character;
-          };
-          title += '[' + timeBarArray.join('') + ']';
         } else {
-          var exclamationString = this.titleTick % 2 == 0 ? '!-' : '-!';
-          title = '[' + new Array(this.timeBarWidth/1.5).join(exclamationString) + 'GAME OVER' + new Array(this.timeBarWidth/1.5).join(exclamationString) + ']';
         }
         
         document.title = title;
@@ -286,6 +288,7 @@ var util = {
         {
           var blockSize = this.blockSize;
           var blockCoverTolerance = this.blockCoverTolerance;
+          var resizeBarSize = this.resizeBarSizeMax * (this.resizeEnergy / this.resizeEnergyMax);
 
           this.red = ((this.red || 0) + 8) % 256;
 
@@ -312,13 +315,13 @@ var util = {
             // detect viewport covering block
             var viewportCovering = { left: false, top: false, right: false, bottom: false };
             {
-              var blockOffsetLeft = block.pos.x - this.cameraPosition.x;
-              var blockOffsetTop = block.pos.y - this.cameraPosition.y;
+              var blockOffsetLeft = block.pos.x - (this.cameraPosition.x + resizeBarSize);
+              var blockOffsetTop = block.pos.y - (this.cameraPosition.y + resizeBarSize);
               viewportCovering.left = blockOffsetLeft <= 0 && Math.abs(blockOffsetLeft) <= blockCoverTolerance;
               viewportCovering.top = blockOffsetTop <= 0 && Math.abs(blockOffsetTop) <= blockCoverTolerance;
 
-              var blockOffsetRight = blockSize - this.viewportSize.x + blockOffsetLeft;
-              var blockOffsetBottom = blockSize - this.viewportSize.y + blockOffsetTop;
+              var blockOffsetRight = blockSize - (this.viewportSize.x - 2*resizeBarSize) + blockOffsetLeft;
+              var blockOffsetBottom = blockSize - (this.viewportSize.y - 2*resizeBarSize) + blockOffsetTop;
               viewportCovering.right = blockOffsetRight >= 0 && blockOffsetRight <= blockCoverTolerance;
               viewportCovering.bottom = blockOffsetBottom >= 0 && blockOffsetBottom <= blockCoverTolerance;
             }
@@ -338,6 +341,8 @@ var util = {
 
               // coverage indicators 
               {
+                ctx.save();
+
                 var coveredColor = 'rgb(' + this.red + ', 0, 0)';
                 var uncoveredColor = 'rgb(255, 255, 255)';
                 if (this.gameover) coveredColor = uncoveredColor = 'rgb(171, 171, 171)';
@@ -346,13 +351,6 @@ var util = {
                   ctx.fillStyle = viewportCoveringBlock ? coveredColor : uncoveredColor;
                   ctx.fillRect(0, 0, blockSize, blockSize);
                 } else {
-                  var completeTriangleAndStartNew = function(ctx, color) {
-                    ctx.lineTo(blockSize/2, blockSize/2);
-                    ctx.fill();
-                    ctx.fillStyle = color;
-                    ctx.beginPath();
-                  }
-
                   // top
                   ctx.fillStyle = viewportCovering.top ? coveredColor : uncoveredColor;
                   ctx.beginPath();
@@ -382,6 +380,8 @@ var util = {
                   ctx.lineTo(blockSize/2, blockSize/2);
                   ctx.fill();
                 }
+
+                ctx.restore();
               }
               // inner block fill
               {
@@ -395,7 +395,8 @@ var util = {
                   var blockCoverageIndicatorSize = (blockSize - blockCoverTolerance*2) * (block.coverageTime / this.blockCoverageTimeMax);
                   ctx.fillStyle = 'rgb(255, 255, 0)';
                   util.fillRectFromCenterAndSize(ctx, blockSize/2, blockSize/2, blockCoverageIndicatorSize, blockCoverageIndicatorSize);
-                } 
+                }
+                // activate block
                 if (block.coverageTime >= this.blockCoverageTimeMax) {
                   // modify block lists
                   {
@@ -403,16 +404,27 @@ var util = {
                     this.blocks.splice(this.blocks.indexOf(block), 1);
                     i--;
                   }
-                  // add new block at random offset
+                  // add new blocks at random offsets
                   {
-                    var magnitude = (this.newBlockOffsetMax - this.newBlockOffsetMin) * Math.random() + this.newBlockOffsetMin;
-                    var directionRad = Math.random() * Math.PI * 2; 
-                    var offsetX = Math.cos(directionRad) * magnitude;
-                    var offsetY = Math.sin(directionRad) * magnitude;
-                    this.blocks.push({ pos: {x: block.pos.x + offsetX, y: block.pos.y + offsetY}, coverageTime: 0 });
+                    this.currentScore++;
+                    var numBlocksToSpawn = 1;
+                    for (var i = 0; i < this.scoresToSpawnExtraBlock.length; i++) {
+                      if (this.scoresToSpawnExtraBlock[i] == this.currentScore)
+                        numBlocksToSpawn++;
+                    };
+                    if (this.currentScore > this.scoresToSpawnExtraBlock[this.scoresToSpawnExtraBlock.length - 1] && this.currentScore % 5 == 0) {
+                      numBlocksToSpawn++;
+                    }
+
+                    for (var i = 0; i < numBlocksToSpawn; i++) {
+                      var magnitude = (this.newBlockOffsetMax - this.newBlockOffsetMin) * Math.random() + this.newBlockOffsetMin;
+                      var directionRad = Math.random() * Math.PI * 2; 
+                      var offsetX = Math.cos(directionRad) * magnitude;
+                      var offsetY = Math.sin(directionRad) * magnitude;
+                      this.blocks.push({ pos: {x: block.pos.x + offsetX, y: block.pos.y + offsetY}, coverageTime: 0 });
+                    }
                   }
-                  this.currentScore++;
-                  this.timer += this.timeGainedFromBlock;
+                  this.setResizeEnergy(this.resizeEnergy + this.resizeEnergyGainedFromBlock);
                   this.targetSize = { x: this.resolution.y * 0.8, y: this.resolution.y * 0.8, sizePerFrame: 80, targetCameraCenterInWorld: { x: block.pos.x + blockSize/2, y: block.pos.y + blockSize/2 } };
                 }
               }
@@ -422,6 +434,45 @@ var util = {
         }
 
         // back to screen space
+        ctx.restore();
+      }
+
+      // energy bar border around screen
+      {
+        ctx.save();
+
+        ctx.lineWidth = resizeBarSize * 2;
+        ctx.strokeStyle = this.resizeBarColor;
+        ctx.beginPath();
+        ctx.moveTo(0, 0);
+        ctx.lineTo(this.viewportSize.x, 0);
+        ctx.lineTo(this.viewportSize.x, this.viewportSize.y);
+        ctx.lineTo(0, this.viewportSize.y);
+        ctx.lineTo(0, 0);
+        ctx.stroke();
+
+        // little notches to help gauge how much energy you have left
+        {
+          var notches = Math.floor(this.resizeEnergy / this.resizeBarEnergyPerNotch);
+          var maxNotches = this.resizeEnergyMax / this.resizeBarEnergyPerNotch;
+          var pixelsPerNotch = this.resizeBarSizeMax * (1 / maxNotches);
+          ctx.lineWidth = 1;
+
+          var notchRed = Math.floor(interp.linear(255, 180, notches / maxNotches));
+          var notchGreen = Math.floor(interp.linear(0, 180, notches / maxNotches));
+          ctx.strokeStyle = 'rgb(' + notchRed + ', ' + notchGreen + ', 0)';
+          for (var i = 0; i < notches; i++) {
+            var notchOffset = pixelsPerNotch * (i + 1); // add 1 to i to make notch for inner-most meter but not for outer-most
+            ctx.beginPath();
+            ctx.moveTo(notchOffset, notchOffset);
+            ctx.lineTo(this.viewportSize.x - notchOffset, notchOffset);
+            ctx.lineTo(this.viewportSize.x - notchOffset, this.viewportSize.y - notchOffset);
+            ctx.lineTo(notchOffset, this.viewportSize.y - notchOffset);
+            ctx.lineTo(notchOffset, notchOffset);
+            ctx.stroke();
+          };
+        }
+
         ctx.restore();
       }
 
