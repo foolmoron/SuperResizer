@@ -96,6 +96,7 @@ var util = {
     timerMax: 60,
     timer: 60,
     timeGainedFromBlock: 10,
+    currentScore: 0,
 
     timeBarWidth: 90,
     timeBarClocks: ['🕛','🕐','🕑','🕒','🕓','🕔','🕕','🕖','🕗','🕘','🕙','🕚'],
@@ -127,6 +128,10 @@ var util = {
       this.setViewportSize(500, 500);
       this.centerPopup();
       this.cameraPosition = { x: 0, y: 0};
+
+      this.gameoverElement = document.getElementById('gameover');
+      this.currentScoreElement = document.getElementById('currentscore');
+      this.bestScoreElement = document.getElementById('bestscore');
 
       this.canvas = document.getElementById('game');
       this.ctx = this.canvas.getContext("2d");
@@ -170,13 +175,20 @@ var util = {
         }
       }
 
-      // countdown timer
+      // countdown timer & gameover stuff
       {
         if (!this.gameover) {
           this.timer -= dt;
           if (this.timer < 0) {
             this.gameover = true;
+            this.gameoverElement.style.display = 'block';
+
+            localStorage.setItem('best', Math.max(localStorage.getItem('best') || 0, this.currentScore));
+            this.currentScoreElement.innerHTML = this.currentScore;
+            this.bestScoreElement.innerHTML = localStorage.getItem('best');
           }
+        } else {
+          this.gameoverElement.style.marginTop = ((this.viewportSize.y - this.gameoverElement.offsetHeight) / 2) + 'px';
         }
       }
 
@@ -380,10 +392,9 @@ var util = {
                     var directionRad = Math.random() * Math.PI * 2; 
                     var offsetX = Math.cos(directionRad) * magnitude;
                     var offsetY = Math.sin(directionRad) * magnitude;
-                    console.log(offsetX, offsetY);
-                    console.log(block.pos.x + offsetX, block.pos.y + offsetY);
                     this.blocks.push({ pos: {x: block.pos.x + offsetX, y: block.pos.y + offsetY}, coverageTime: 0 });
                   }
+                  this.currentScore++;
                   this.timer += this.timeGainedFromBlock;
                   this.targetSize = { x: this.resolution.y * 0.8, y: this.resolution.y * 0.8, sizePerFrame: 80, targetCameraCenterInWorld: { x: block.pos.x + blockSize/2, y: block.pos.y + blockSize/2 } };
                 }

@@ -2,3 +2,10 @@ body {
   margin: 0;
   overflow: hidden;
 }
+
+#gameover {
+  position: absolute;
+  display: none;
+  width: 100%;
+  text-align: center;
+}
