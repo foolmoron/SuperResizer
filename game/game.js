@@ -29,6 +29,16 @@ var addEvent = function(elem, type, eventHandle) {
 var util = {
   fillRectFromCenterAndSize: function(ctx, centerX, centerY, sizeX, sizeY) {
     ctx.fillRect(centerX - sizeX/2, centerY - sizeY/2, sizeX, sizeY);
+  },
+  lerp: function(a, b, t) {
+    return a * (1-t) + b * t;
+  },
+  normalOfVectorObject: function(vector) {
+    return this.normalOfVector(vector.x, vector.y);
+  },
+  normalOfVector: function(x, y) {
+    var magnitude = Math.sqrt(x * x + y + y);
+    return { x: x / magnitude, y: y / magnitude };
   }
 };
 
@@ -80,6 +90,16 @@ var util = {
       this.cameraPosition.y += deltas.top;
     },
 
+
+    blockSize: 200,
+    blockPositions: [
+        [150, 150]
+      ],
+    blockCoverageTimeMax: 2,
+    blockCoverTolerance: 15,
+    blockCoverageTimes: [], // sparse array of seconds of coverage for each block
+    blocksActivated: [], // sparse array with bool for activation state of each block 
+
     start: function() {
       window.game = this;
       var self = this;
@@ -124,6 +144,46 @@ var util = {
         ctx.fillRect(0, 0, canvas.width, canvas.height);
       }
 
+      // gradients for blocks
+      {
+        var blockSize = this.blockSize;
+
+        var cameraCenterInWorld = { x: this.cameraPosition.x + this.viewportSize.x/2, y: this.cameraPosition.y + this.viewportSize.y/2 };
+
+        for (var i = 0; i < this.blockPositions.length; i++) {
+          var blockPosition = this.blockPositions[i];
+
+          var distX = cameraCenterInWorld.x - blockPosition[0];
+          var distY = cameraCenterInWorld.y - blockPosition[1];
+          var distToCameraCenter = Math.sqrt(distX * distX + distY * distY);
+          var distNormalizeFactor = 500;
+          distToCameraCenter = Math.max(distToCameraCenter, distNormalizeFactor);
+          var closenessScalingFactor = 1/(distToCameraCenter/distNormalizeFactor); // decreases from 1 to 0 as dist goes up
+
+          var gradientPositions = []; // [startX, startY, endX, endY]
+          if (Math.abs(distX) >= Math.abs(distY)) {
+            if (distX >= 0) { // towards right
+              gradientPositions = [0, 400 / 2, 400, 400 / 2];
+            } else { // towards left
+              gradientPositions = [this.viewportSize.x, 400 / 2, this.viewportSize.x - 400, 400 / 2];              
+            }
+          } else {
+            if (distY >= 0) { // towards down
+              gradientPositions = [400 / 2, 0, 400 / 2, 400];
+            } else { // towards up
+              gradientPositions = [400 / 2, this.viewportSize.y, 400 / 2, this.viewportSize.y - 400];              
+            }
+          }
+          
+          var sunGradient = ctx.createLinearGradient(gradientPositions[0], gradientPositions[1], gradientPositions[2], gradientPositions[3]);
+          sunGradient.addColorStop(0, 'rgba(255, 255, 255, ' + (closenessScalingFactor + 0.25) + ')');
+          sunGradient.addColorStop(closenessScalingFactor, 'rgba(255, 255, 255, 0)'); // stretch gradient based on distance to block
+          sunGradient.addColorStop(1, 'rgba(255, 255, 255, 0)');
+          ctx.fillStyle = sunGradient;
+          ctx.fillRect(0, 0, canvas.width, canvas.height);
+        }
+      }
+
       // everything in here is in camera space, due to subtracting the camera's position
       {
         ctx.save();
@@ -131,26 +191,13 @@ var util = {
 
         // blocks
         {
-          var blockSize = 200;
-          var blockPositions = this.blockPositions = this.blockPositions || [
-            [150, 150],
-            [600, 0],
-            [600, 600],
-            [920, 200],
-            [1200, 1000],
-            [-500, -500],
-            [1500, 800]
-          ];
-          var blockCoverageTimeMax = 2;
-          var blockCoverageTimes = this.blockCoverageTimes = this.blockCoverageTimes || []; // sparse array of seconds of coverage for each block
-          var blocksActivated = this.blocksActivated = this.blocksActivated || []; // sparse array with bool for activation state of each block 
-
-          var blockCoverTolerance = 15;
+          var blockSize = this.blockSize;
+          var blockCoverTolerance = this.blockCoverTolerance;
 
           this.red = ((this.red || 0) + 8) % 256;
 
-          for (var i = 0; i < blockPositions.length; i++) {
-            var blockPosition = blockPositions[i];
+          for (var i = 0; i < this.blockPositions.length; i++) {
+            var blockPosition = this.blockPositions[i];
             ctx.save();
             // detect viewport covering block
             var viewportCoveringBlock = false;
@@ -168,28 +215,15 @@ var util = {
             // block coverage stuff
             {
               if (viewportCoveringBlock) {
-                blockCoverageTimes[i] = (blockCoverageTimes[i] || 0) + dt;
+                this.blockCoverageTimes[i] = (this.blockCoverageTimes[i] || 0) + dt;
               } else {
-                blockCoverageTimes[i] = 0;
+                this.blockCoverageTimes[i] = 0;
               }
             }
             // draw block stuff
             {
               ctx.translate(blockPosition[0], blockPosition[1])
 
-              // "sun" gradient under block
-              {
-                var viewportCenterWorldPosition = { x: this.cameraPosition.x + this.viewportSize.x/2, y: this.cameraPosition.y + this.viewportSize.y/2 };
-                var distX = viewportCenterWorldPosition.x - blockPosition[0];
-                var distY = viewportCenterWorldPosition.y - blockPosition[1];
-                var distanceToCameraCenter = Math.sqrt(distX * distX + distY * distY);
-                distanceToCameraCenter = Math.max(distanceToCameraCenter, blockSize);
-                var sunGradient = ctx.createRadialGradient(blockSize/2, blockSize/2, blockSize/2, blockSize/2, blockSize/2, distanceToCameraCenter);
-                sunGradient.addColorStop(0, 'rgba(255, 255, 255, 1)');
-                sunGradient.addColorStop(1, 'rgba(255, 255, 255, 0)');
-                ctx.fillStyle = sunGradient;
-                ctx.fillRect(-distanceToCameraCenter + blockSize/2, -distanceToCameraCenter + blockSize/2, distanceToCameraCenter*2, distanceToCameraCenter*2);
-              }
               // actual block 
               {
                 ctx.fillStyle = 'rgb(' + this.red + ', 0, 0)';
@@ -197,19 +231,19 @@ var util = {
               }
               // inner block fill
               {
-                ctx.fillStyle = blocksActivated[i] ? 'rgb(0, 128, 255)' : viewportCoveringBlock ? 'rgb(255, 255, 255)' : 'rgb(0, 200, 0)';
+                ctx.fillStyle = this.blocksActivated[i] ? 'rgb(0, 128, 255)' : viewportCoveringBlock ? 'rgb(255, 255, 255)' : 'rgb(0, 200, 0)';
                 ctx.fillRect(blockCoverTolerance, blockCoverTolerance, blockSize - blockCoverTolerance*2, blockSize - blockCoverTolerance*2);                
               }
               // coverage indicator
               {
-                var blockCoverageTime = blockCoverageTimes[i];
-                if (!blocksActivated[i] && blockCoverageTime > 0 && blockCoverageTime <= blockCoverageTimeMax) {
-                  var blockCoverageIndicatorSize = (blockSize - blockCoverTolerance*2) * (blockCoverageTime / blockCoverageTimeMax);
+                var blockCoverageTime = this.blockCoverageTimes[i];
+                if (!this.blocksActivated[i] && blockCoverageTime > 0 && blockCoverageTime <= this.blockCoverageTimeMax) {
+                  var blockCoverageIndicatorSize = (blockSize - blockCoverTolerance*2) * (blockCoverageTime / this.blockCoverageTimeMax);
                   ctx.fillStyle = 'rgb(255, 255, 0)';
                   util.fillRectFromCenterAndSize(ctx, blockSize/2, blockSize/2, blockCoverageIndicatorSize, blockCoverageIndicatorSize);
                 } 
-                if (blockCoverageTime >= blockCoverageTimeMax) {
-                  blocksActivated[i] = true;
+                if (blockCoverageTime >= this.blockCoverageTimeMax) {
+                  this.blocksActivated[i] = true;
                 }
               }
             }
