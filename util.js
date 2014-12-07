@@ -41,5 +41,7 @@ var util = {
 
 // interpolation
 var interp = {
-  linear: function(a, b, t) { return a * (1-t) + b*t; }
+  linear: function(a, b, t) { var i = t; return a*(1-i) + b*i; },
+  easeOutSine: function(a, b, t) { var i = Math.sin(t * Math.PI/2); return a*(1-i) + b*i; },
+  easeOutBack: function(a, b, t, strength) { var strength = strength || 1.5; t = t-1; var i = (t*t * ((strength + 1)*t + strength) + 1); return a + b*i; },
 };
