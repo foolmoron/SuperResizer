@@ -289,6 +289,23 @@ var util = {
 
           this.red = ((this.red || 0) + 8) % 256;
 
+          // draw activated blocks under available blocks
+          for (var i = 0; i < this.activatedblocks.length; i++) {
+            var activatedBlock = this.activatedblocks[i];
+            ctx.save();
+            ctx.translate(activatedBlock.pos.x, activatedBlock.pos.y)
+
+            // activated block 
+            {
+              ctx.fillStyle = 'rgb(0, 128, 255)';
+              if (this.gameover) ctx.fillStyle = 'rgb(180, 180, 180)';
+              ctx.fillRect(0, 0, blockSize, blockSize);
+            }
+
+            ctx.restore();
+          };
+
+          // available blocks
           for (var i = 0; i < this.blocks.length; i++) {
             var block = this.blocks[i];
             ctx.save();
@@ -400,21 +417,6 @@ var util = {
                 }
               }
             }
-            ctx.restore();
-          };
-
-          for (var i = 0; i < this.activatedblocks.length; i++) {
-            var activatedBlock = this.activatedblocks[i];
-            ctx.save();
-            ctx.translate(activatedBlock.pos.x, activatedBlock.pos.y)
-
-            // activated block 
-            {
-              ctx.fillStyle = 'rgb(0, 128, 255)';
-              if (this.gameover) ctx.fillStyle = 'rgb(180, 180, 180)';
-              ctx.fillRect(0, 0, blockSize, blockSize);
-            }
-
             ctx.restore();
           };
         }
