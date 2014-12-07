@@ -1,14 +1,5 @@
-"use strict"
-
-// anim shim
-window.requestAnimationFrameWithContext = (function(){
-  return  window.requestAnimationFrame ||
-    window.webkitRequestAnimationFrame ||
-    window.mozRequestAnimationFrame ||
-    function(callback) {
-      window.setTimeout(callback, 1000 / 60);
-    };
-})();
+"use strict";
+// NEEDS util.js
 
 // stuff for main webpage, not game popup
 (function() {
