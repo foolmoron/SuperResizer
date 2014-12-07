@@ -148,7 +148,6 @@ var util = {
           var blockCoverTolerance = 15;
 
           this.red = ((this.red || 0) + 8) % 256;
-          ctx.fillStyle = 'rgb(' + this.red + ', 0, 0)';
 
           for (var i = 0; i < blockPositions.length; i++) {
             var blockPosition = blockPositions[i];
@@ -174,20 +173,44 @@ var util = {
                 blockCoverageTimes[i] = 0;
               }
             }
-            // draw block
+            // draw block stuff
             {
               ctx.translate(blockPosition[0], blockPosition[1])
-              ctx.fillRect(0, 0, blockSize, blockSize);
-              ctx.fillStyle = blocksActivated[i] ? 'rgb(0, 128, 255)' : viewportCoveringBlock ? 'rgb(255, 255, 255)' : 'rgb(0, 200, 0)';
-              ctx.fillRect(blockCoverTolerance, blockCoverTolerance, blockSize - blockCoverTolerance*2, blockSize - blockCoverTolerance*2);
-              var blockCoverageTime = blockCoverageTimes[i];
-              if (!blocksActivated[i] && blockCoverageTime > 0 && blockCoverageTime <= blockCoverageTimeMax) {
-                var blockCoverageIndicatorSize = (blockSize - blockCoverTolerance*2) * (blockCoverageTime / blockCoverageTimeMax);
-                ctx.fillStyle = 'rgb(255, 255, 0)';
-                util.fillRectFromCenterAndSize(ctx, blockSize/2, blockSize/2, blockCoverageIndicatorSize, blockCoverageIndicatorSize);
-              } 
-              if (blockCoverageTime >= blockCoverageTimeMax) {
-                blocksActivated[i] = true;
+
+              // "sun" gradient under block
+              {
+                var viewportCenterWorldPosition = { x: this.cameraPosition.x + this.viewportSize.x/2, y: this.cameraPosition.y + this.viewportSize.y/2 };
+                var distX = viewportCenterWorldPosition.x - blockPosition[0];
+                var distY = viewportCenterWorldPosition.y - blockPosition[1];
+                var distanceToCameraCenter = Math.sqrt(distX * distX + distY * distY);
+                distanceToCameraCenter = Math.max(distanceToCameraCenter, blockSize);
+                var sunGradient = ctx.createRadialGradient(blockSize/2, blockSize/2, blockSize/2, blockSize/2, blockSize/2, distanceToCameraCenter);
+                sunGradient.addColorStop(0, 'rgba(255, 255, 255, 1)');
+                sunGradient.addColorStop(1, 'rgba(255, 255, 255, 0)');
+                ctx.fillStyle = sunGradient;
+                ctx.fillRect(-distanceToCameraCenter + blockSize/2, -distanceToCameraCenter + blockSize/2, distanceToCameraCenter*2, distanceToCameraCenter*2);
+              }
+              // actual block 
+              {
+                ctx.fillStyle = 'rgb(' + this.red + ', 0, 0)';
+                ctx.fillRect(0, 0, blockSize, blockSize);
+              }
+              // inner block fill
+              {
+                ctx.fillStyle = blocksActivated[i] ? 'rgb(0, 128, 255)' : viewportCoveringBlock ? 'rgb(255, 255, 255)' : 'rgb(0, 200, 0)';
+                ctx.fillRect(blockCoverTolerance, blockCoverTolerance, blockSize - blockCoverTolerance*2, blockSize - blockCoverTolerance*2);                
+              }
+              // coverage indicator
+              {
+                var blockCoverageTime = blockCoverageTimes[i];
+                if (!blocksActivated[i] && blockCoverageTime > 0 && blockCoverageTime <= blockCoverageTimeMax) {
+                  var blockCoverageIndicatorSize = (blockSize - blockCoverTolerance*2) * (blockCoverageTime / blockCoverageTimeMax);
+                  ctx.fillStyle = 'rgb(255, 255, 0)';
+                  util.fillRectFromCenterAndSize(ctx, blockSize/2, blockSize/2, blockCoverageIndicatorSize, blockCoverageIndicatorSize);
+                } 
+                if (blockCoverageTime >= blockCoverageTimeMax) {
+                  blocksActivated[i] = true;
+                }
               }
             }
             ctx.restore();
