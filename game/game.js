@@ -223,7 +223,7 @@
     },
 
     resizeBarSizeMax: 50,
-    resizeBarColor: 'rgb(255, 255, 0)',
+    resizeBarColor: 'rgb(255, 255, 100)',
     resizeBarEnergyPerNotch: 1000,
 
     currentScore: 0,
@@ -234,7 +234,7 @@
     blockCoverageTimeMax: 1.25,
     blockCoverTolerance: 15,
     blocks: [
-      { pos: {x: 150, y: 150}, coverageTime: 0, wasCovered: {} }
+      { pos: {x: 158, y: 158}, coverageTime: 0, wasCovered: {} }
     ],
     activatedblocks: [],
 
@@ -532,7 +532,7 @@
               }
               // inner block fill
               {
-                ctx.fillStyle = viewportCoveringBlock ? 'rgb(255, 255, 255)' : 'rgb(200, 0, 0)';
+                ctx.fillStyle = viewportCoveringBlock ? 'rgb(255, 255, 255)' : 'rgb(255, 100, 100)';
                 if (this.gameover) ctx.fillStyle = 'rgb(213, 213, 213)';
                 ctx.fillRect(blockCoverTolerance, blockCoverTolerance, blockSize - blockCoverTolerance*2, blockSize - blockCoverTolerance*2);                
               }
@@ -540,7 +540,7 @@
               {
                 if (block.coverageTime > 0 && block.coverageTime <= this.blockCoverageTimeMax) {
                   var blockCoverageIndicatorSize = (blockSize - blockCoverTolerance*2) * (block.coverageTime / this.blockCoverageTimeMax);
-                  ctx.fillStyle = 'rgb(255, 255, 0)';
+                  ctx.fillStyle = 'rgb(255, 255, 128)';
                   util.fillRectFromCenterAndSize(ctx, blockSize/2, blockSize/2, blockCoverageIndicatorSize, blockCoverageIndicatorSize);
                 }
                 // activate block
