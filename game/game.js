@@ -256,6 +256,8 @@
       window.game = this;
       var self = this;
 
+      Howler.volume(0);
+
       addEvent(window, 'resize', function(e) { self.onResize.call(self, e); });
 
       this.resolution = { x: window.screen.width, y: window.screen.height }
@@ -271,7 +273,7 @@
 
       this.canvas = document.getElementById('game');
       this.ctx = this.canvas.getContext("2d");
-      this.update();
+      setTimeout(function() { self.update(); Howler.volume(1); audio.start.play(); }, 500);
     },
     update: function(timestamp) {
       var self = this;

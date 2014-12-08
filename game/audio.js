@@ -36,4 +36,9 @@ var audio = {
     autoplay: false,
     loop: false
   }),
+  start: new Howl({
+    urls: ['audio/start.wav'],
+    autoplay: false,
+    loop: false
+  }),
 };
