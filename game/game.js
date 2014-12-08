@@ -588,7 +588,7 @@
               ctx.translate(square.pos.x, square.pos.y);
 
               var squareSize = squareSizeMax * square.lifeSeconds / this.resizeOutSquareLifeMax;
-              ctx.fillStyle = 'rgb(255, 0, 255)';
+              ctx.fillStyle = 'rgba(255, 255, 0, 0.25)';
               ctx.fillRect(squareSizeMax - squareSize, squareSizeMax - squareSize, squareSize, squareSize);  
 
               ctx.restore();
@@ -602,7 +602,7 @@
               ctx.translate(interp.easeOutQuint(wave.startPos.x, wave.endPos.x, 1-t), interp.easeOutQuint(wave.startPos.y, wave.endPos.y, 1-t));
 
               var waveHeight = waveHeightMax * t;
-              ctx.fillStyle = 'rgb(255, 0, 255)';
+              ctx.fillStyle = 'rgba(255, 255, 0, 0.25)';
               if (wave.horizontal) {
                 ctx.fillRect(0, waveHeightMax - waveHeight, this.resizeInWaveWidth, waveHeight);
               } else {
