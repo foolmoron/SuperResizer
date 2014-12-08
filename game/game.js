@@ -486,6 +486,36 @@
             {
               ctx.translate(block.pos.x, block.pos.y)
 
+              // block tutorial
+              {
+                this.tutorialTick = ((this.tutorialTick || 0) + 1) % 150;
+                var tAlpha = this.tutorialTick / 30;
+                var tTL = (this.tutorialTick - 30) / 30;
+                var tBR = (this.tutorialTick - 60) / 30;
+                var tWait = (this.tutorialTick - 90) / 60;
+
+                this.tutorialAlpha = this.tutorialAlpha || 0;
+                this.tutorialSize = this.tutorialSize || blockSize*1.5;
+                this.tutorialOffset = this.tutorialOffset || { x: -blockSize*0.75, y: -blockSize*0.75 };
+
+                if (tWait >= 0) {
+
+                } else if (tBR >= 0) {
+                  this.tutorialSize = interp.linear(blockSize*1.25, blockSize * 1, tBR);
+                } else if (tTL >= 0) {
+                  this.tutorialOffset.x = interp.linear(-blockSize*0.75, -blockSize*0.5, tTL);
+                  this.tutorialOffset.y = interp.linear(-blockSize*0.75, -blockSize*0.5, tTL);
+                  this.tutorialSize = interp.linear(blockSize*1.5, blockSize * 1.25, tTL);
+                } else if (tAlpha >= 0) {
+                  this.tutorialAlpha = interp.linear(0, 0.25, tAlpha);
+                  this.tutorialOffset.x = -blockSize*0.75;
+                  this.tutorialOffset.y = -blockSize*0.75;
+                  this.tutorialSize = blockSize*1.5;
+                }
+
+                ctx.fillStyle = 'rgba(255, 255, 255, ' + this.tutorialAlpha + ')';
+                ctx.fillRect(this.tutorialOffset.x + blockSize/2, this.tutorialOffset.y + blockSize/2, this.tutorialSize, this.tutorialSize);
+              }
               // coverage indicators 
               {
                 ctx.save();
@@ -540,7 +570,7 @@
               {
                 if (block.coverageTime > 0 && block.coverageTime <= this.blockCoverageTimeMax) {
                   var blockCoverageIndicatorSize = (blockSize - blockCoverTolerance*2) * (block.coverageTime / this.blockCoverageTimeMax);
-                  ctx.fillStyle = 'rgb(255, 255, 128)';
+                  ctx.fillStyle = 'rgb(255, 255, 0)';
                   util.fillRectFromCenterAndSize(ctx, blockSize/2, blockSize/2, blockCoverageIndicatorSize, blockCoverageIndicatorSize);
                 }
                 // activate block
