@@ -60,11 +60,33 @@
         this.cameraPosition.x += deltas.left;
         this.cameraPosition.y += deltas.top;
 
+        // spawn particles
         this.spawnResizeParticles(deltas);
 
-        // draing resize energy
+        // drain resize energy
         var deltasTotal = Math.abs(deltas.left) + Math.abs(deltas.right) + Math.abs(deltas.top) + Math.abs(deltas.bottom);
         this.setResizeEnergy(this.resizeEnergy - deltasTotal);
+
+        // sound
+        if (!this.gameover) {
+          var self = this;
+          var resizeIn = deltas.left > 0 || deltas.top > 0 || deltas.right < 0 || deltas.bottom < 0;
+          var resizeOut = deltas.left < 0 || deltas.top < 0 || deltas.right > 0 || deltas.bottom > 0;
+          if (resizeIn) {
+            if (!this.resizeInAudioPlaying)
+              audio.resizein.play();
+            clearTimeout(this.resizeInAudioTimeout);
+            this.resizeInAudioPlaying = true;
+            this.resizeInAudioTimeout = setTimeout(function() { audio.resizein.fadeOut(0, 100, function() { audio.resizein.stop().volume(1); self.resizeInAudioPlaying = false; }); }, 100);
+          }
+          if (resizeOut) {
+            if (!this.resizeOutAudioPlaying)
+              audio.resizeout.play();
+            clearTimeout(this.resizeOutAudioTimeout);
+            this.resizeOutAudioPlaying = true;
+            this.resizeOutAudioTimeout = setTimeout(function() { audio.resizeout.fadeOut(0, 100, function() { audio.resizeout.stop().volume(1); self.resizeOutAudioPlaying = false; }); }, 100);     
+          }
+        }
       }
     },
 
@@ -168,7 +190,11 @@
     },
 
     doGameover: function() {
+      if (this.gameover)
+        return;
       var self = this;
+
+      audio.gameover.play();
 
       this.gameover = true;
       this.gameoverElement.style.display = 'block';
@@ -208,7 +234,7 @@
     blockCoverageTimeMax: 1.25,
     blockCoverTolerance: 15,
     blocks: [
-      { pos: {x: 150, y: 150}, coverageTime: 0 }
+      { pos: {x: 150, y: 150}, coverageTime: 0, wasCovered: {} }
     ],
     activatedblocks: [],
 
@@ -408,9 +434,22 @@
             var viewportCoveringNone = !viewportCovering.left && !viewportCovering.top && !viewportCovering.right && !viewportCovering.bottom;
             // block coverage stuff
             {
+              if (!this.gameover) {
+                var coverOn = (viewportCovering.left && !block.wasCovered.left) || (viewportCovering.top && !block.wasCovered.top) || (viewportCovering.right && !block.wasCovered.right) || (viewportCovering.bottom && !block.wasCovered.bottom);
+                var coverOff = (block.wasCovered.left && !viewportCovering.left) || (block.wasCovered.top && !viewportCovering.top) || (block.wasCovered.right && !viewportCovering.right) || (block.wasCovered.bottom && !viewportCovering.bottom);
+                if (coverOn)
+                  audio.coveron.play();
+                if (coverOff)
+                  audio.coveroff.play();
+              }
+              block.wasCovered = viewportCovering;
+
               if (viewportCoveringBlock && !this.gameover) {
+                if (block.coverageTime == 0)
+                  audio.covering.play();
                 block.coverageTime += dt;
               } else {
+                audio.covering.stop();
                 block.coverageTime = 0;
               }
             }
@@ -504,9 +543,10 @@
                       var directionRad = Math.random() * Math.PI * 2; 
                       var offsetX = Math.cos(directionRad) * magnitude;
                       var offsetY = Math.sin(directionRad) * magnitude;
-                      this.blocks.push({ pos: {x: block.pos.x + offsetX, y: block.pos.y + offsetY}, coverageTime: 0 });
+                      this.blocks.push({ pos: {x: block.pos.x + offsetX, y: block.pos.y + offsetY}, coverageTime: 0, wasCovered: {} });
                     }
                   }
+                  audio.activated.play();
                   this.setResizeEnergy(this.resizeEnergy + this.resizeEnergyGainedFromBlock);
                   this.targetSize = { x: this.resolution.y * 0.8, y: this.resolution.y * 0.8, sizePerFrame: 80, targetCameraCenterInWorld: { x: block.pos.x + blockSize/2, y: block.pos.y + blockSize/2 } };
                 }
