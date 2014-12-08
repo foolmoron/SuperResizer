@@ -225,6 +225,8 @@
     getBlockOffsetMax: function(score) {
       if (this.isSafari) {
         return interp.linear(500, 1100, score/12);
+      } else {
+        return interp.linear(350, 900, score/12);        
       }
     },
 
