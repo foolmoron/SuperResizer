@@ -1,3 +1,14 @@
+html {
+  background: rgb(249, 249, 249);
+}
+p {
+  font-size: 18px;
+}
+
+.logo {
+  max-width: 700px;  
+}
+
 .content {
   width: 100%;
   text-align: center;
@@ -5,8 +16,20 @@
 
 .launch-text {
   font-weight: bold;
+  font-size: 20px;
 }
 
 .countdown {
   font-size: 32px;
+}
+
+.warning {
+  max-width: 1000px;
+  margin: auto;
+  font-size: 24px;
+}
+
+.instructions {
+  font-size: 20px;
+  line-height: 30px;
 }
