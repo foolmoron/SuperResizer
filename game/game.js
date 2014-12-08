@@ -216,10 +216,16 @@
 
     // 1 block offset roughly translates into about 3.5 resize energy
     getBlockOffsetMin: function(score) {
-      return interp.linear(300, 600, score/12);
+      if (this.isSafari) {
+        return interp.linear(450, 700, score/12);
+      } else {
+        return interp.linear(300, 600, score/12);
+      }      
     },
     getBlockOffsetMax: function(score) {
-      return interp.linear(350, 900, score/12);
+      if (this.isSafari) {
+        return interp.linear(500, 1100, score/12);
+      }
     },
 
     resizeBarSizeMax: 50,
@@ -256,6 +262,14 @@
       window.game = this;
       var self = this;
 
+      this.isSafari = (navigator.userAgent.indexOf('Safari') != -1 && navigator.userAgent.indexOf('Chrome') == -1);
+      if (this.isSafari) {
+        this.blockSize = 450;
+        var safariWarning = document.getElementById('safari');
+        safariWarning.style.display = 'block';
+        setTimeout(function() { safariWarning.style.display = 'none'; }, 5000);
+      }
+
       Howler.volume(0);
 
       addEvent(window, 'resize', function(e) { self.onResize.call(self, e); });
@@ -263,7 +277,11 @@
       this.resolution = { x: window.screen.width, y: window.screen.height }
       this.updatePopupSize();
       this.updateViewportSize();
-      this.setViewportSize(500, 500);
+      if (this.isSafari) {
+        this.setViewportSize(760, 760);
+      } else {
+        this.setViewportSize(500, 500);
+      }
       this.centerPopup();
       this.cameraPosition = { x: 0, y: 0};
 
