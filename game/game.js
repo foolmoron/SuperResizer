@@ -355,7 +355,7 @@
           distToCameraCenter = Math.max(distToCameraCenter, distNormalizeFactor);
           var closenessScalingFactor = 1/(distToCameraCenter/distNormalizeFactor); // decreases from 1 to 0 as dist goes up
 
-          if (Math.abs(distX - blockSize/2=) < this.viewportSize.x/2 && Math.abs(distY - blockSize/2) < this.viewportSize.y/2)
+          if (Math.abs(distX - blockSize/2) < this.viewportSize.x/2 && Math.abs(distY - blockSize/2) < this.viewportSize.y/2)
             continue;
 
           var gradientPositions = []; // [startX, startY, endX, endY]
