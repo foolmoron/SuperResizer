@@ -340,6 +340,29 @@
         ctx.fillRect(0, 0, canvas.width, canvas.height);
       }
 
+      // background dots
+      {
+        var dotInterval = 50;
+        var dotSize = 15;
+
+        var dotsX = Math.ceil(this.viewportSize.x / dotInterval);
+        var dotsY = Math.ceil(this.viewportSize.y / dotInterval);
+        var baseX = this.cameraPosition.x % dotInterval;
+        var baseY = this.cameraPosition.y % dotInterval;
+
+        for (var i = 0; i < dotsX; i++) {
+          for (var j = 0; j < dotsY; j++) {
+            ctx.save();
+            ctx.translate(-baseX + i * dotInterval, -baseY + j * dotInterval);
+
+            ctx.fillStyle = !this.gameover ? 'rgb(0, 0, 100)' : 'rgb(238, 238, 238)';
+            ctx.fillRect(0, 0, dotSize, dotSize);
+
+            ctx.restore();
+          };
+        }
+      }
+
       // gradients for blocks
       {
         var blockSize = this.blockSize;
@@ -400,7 +423,8 @@
           var blockSize = this.blockSize;
           var blockCoverTolerance = this.blockCoverTolerance;
 
-          this.red = ((this.red || 0) + 8) % 256;
+          this.borderTick = ((this.borderTick || 0) + 1) % 30;
+          var t = this.borderTick / 30;
 
           // draw activated blocks under available blocks
           for (var i = 0; i < this.activatedblocks.length; i++) {
@@ -410,7 +434,7 @@
 
             // activated block 
             {
-              ctx.fillStyle = 'rgb(0, 128, 255)';
+              ctx.fillStyle = 'rgb(0, 0, 0)';
               if (this.gameover) ctx.fillStyle = 'rgb(180, 180, 180)';
               ctx.fillRect(0, 0, blockSize, blockSize);
             }
@@ -466,7 +490,7 @@
               {
                 ctx.save();
 
-                var coveredColor = 'rgb(' + this.red + ', 0, 0)';
+                var coveredColor = 'rgb(0, ' + Math.floor(interp.pingpong(128, 255, t)) + ', 0)';
                 var uncoveredColor = 'rgb(255, 255, 255)';
                 if (this.gameover) coveredColor = uncoveredColor = 'rgb(171, 171, 171)';
 
@@ -508,7 +532,7 @@
               }
               // inner block fill
               {
-                ctx.fillStyle = viewportCoveringBlock ? 'rgb(255, 255, 255)' : 'rgb(0, 200, 0)';
+                ctx.fillStyle = viewportCoveringBlock ? 'rgb(255, 255, 255)' : 'rgb(200, 0, 0)';
                 if (this.gameover) ctx.fillStyle = 'rgb(213, 213, 213)';
                 ctx.fillRect(blockCoverTolerance, blockCoverTolerance, blockSize - blockCoverTolerance*2, blockSize - blockCoverTolerance*2);                
               }

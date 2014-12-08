@@ -45,6 +45,7 @@ var util = {
 // interpolation
 var interp = {
   linear: function(a, b, t) { t = util.clamp01(t); var i = t; return a*(1-i) + b*i; },
+  pingpong: function(a, b, t) { t = util.clamp01(t); var i = t < 0.5 ? t = t*2 : -t*2 + 2; return a*(1-i) + b*i; },
   easeOutSine: function(a, b, t) { t = util.clamp01(t); var i = Math.sin(t * Math.PI/2); return a*(1-i) + b*i; },
   easeOutBack: function(a, b, t, strength) { t = util.clamp01(t); var strength = strength || 1.5; t = t-1; var i = (t*t * ((strength + 1)*t + strength) + 1); return a*(1-i) + b*i; },
   easeOutQuint: function(a, b, t) { t = util.clamp01(t); t = t-1; var i = t*t*t + 1; return a*(1-i) + b*i; },
